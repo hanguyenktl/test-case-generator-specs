@@ -90,15 +90,13 @@ The system is built as a series of specialized agentic calls:
 ### Product Requirements
 - [PRD & Scope](file:///Users/ha.nnguyen/TestOps%20Prototypes/test-case-generator/specs/prd/00_PRD_Test_Generator_Agent.md): Main product definitions, success metrics, and overall roadmap.
 
-### Analyzer Pipelines
+### Agent & Pipelines
 - [J1 Jira-Linked Pipeline Spec](file:///Users/ha.nnguyen/TestOps%20Prototypes/test-case-generator/specs/pipelines/01_Spec_Pipeline_Analyzer_J1.md): Logic for requirement-first generation.
 - [J2 Document-Based Pipeline Spec](file:///Users/ha.nnguyen/TestOps%20Prototypes/test-case-generator/specs/pipelines/02_Spec_Pipeline_Analyzer_J2.md): Logic for document-first generation.
-
-### Generation Agents
 - [Test Case Generator Spec](file:///Users/ha.nnguyen/TestOps%20Prototypes/test-case-generator/specs/agents/03_Spec_Agent_Test_Case_Generator.md): Generator logic, budgets, and prompts.
-- [Test Case Quality Scorer Spec](file:///Users/ha.nnguyen/TestOps%20Prototypes/test-case-generator/specs/agents/04_Spec_Agent_Test_Case_Quality_Scorer.md): Quality Assessor logic.
 
 ### Quality Logic & Rules
+- [Test Case Quality Scorer Spec](file:///Users/ha.nnguyen/TestOps%20Prototypes/test-case-generator/specs/agents/04_Spec_Agent_Test_Case_Quality_Scorer.md): Quality Assessor logic.
 - [Requirement Readiness Scoring Specs](file:///Users/ha.nnguyen/TestOps%20Prototypes/test-case-generator/specs/logic/05_Spec_Logic_Requirement_Scoring.md)
 - [Requirement Scoring Rules (JS)](file:///Users/ha.nnguyen/TestOps%20Prototypes/test-case-generator/specs/logic/05_Rule_Requirement_Scoring.js)
 - [TC Scorer Rules Summary](file:///Users/ha.nnguyen/TestOps%20Prototypes/test-case-generator/specs/logic/Ref_TC_Scorer_Rules.md)
