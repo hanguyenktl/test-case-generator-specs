@@ -1,7 +1,7 @@
 # Test Case Generator
 
 **Version:** v4.3 · **Owner:** Hà Nguyễn · **March 2026**
-**Companion docs:** Analyzer_Pipeline_J1_v4.1.md, Analyzer_Pipeline_J2_v4.2.md, TC_Quality_Scorer_v4.1.md, Runner_Quality_Assessor_v4.1.md
+**Companion docs:** ../pipelines/01_Spec_Pipeline_Analyzer_J1.md, ../pipelines/02_Spec_Pipeline_Analyzer_J2.md, 04_Spec_Agent_Test_Case_Quality_Scorer.md, Runner_Quality_Assessor_v4.1.md
 
 > **What changed from v4.2 (this version):**
 > - **Scope reduced:** TC Quality Scorer and Runner Quality Assessor specifications moved to their own companion docs. This doc covers the Generator only.
@@ -469,7 +469,7 @@ Generate test cases. Respond with the JSON object specified in your instructions
 ## §2 — TC Quality Scorer & Runner Quality Assessor
 
 Both are deterministic (no LLM). Full specifications in companion docs:
-- **TC Quality Scorer** (`TC_Quality_Scorer_v4.1.md`): 9-rule step scorer, blended test-case score (60% avg + 40% worst step), 🟢/🟡/🔴 badge thresholds.
+- **TC Quality Scorer** (`04_Spec_Agent_Test_Case_Quality_Scorer.md`): 9-rule step scorer, blended test-case score (60% avg + 40% worst step), 🟢/🟡/🔴 badge thresholds.
 - **Runner Quality Assessor** (`Runner_Quality_Assessor_v4.1.md`): Pre-execution gate that wraps TC scores into a recommendation (proceed / review_first / edit_first), unsupported step list, and time estimate.
 
 **Integration point:** After the Generator returns `testCases[]`, the TC Quality Scorer runs in-process against every test case (<1ms each). Scores are attached before returning to the frontend. The Assessor runs only when the user clicks "Run with AI".

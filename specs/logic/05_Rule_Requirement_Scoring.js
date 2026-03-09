@@ -873,7 +873,23 @@ if (typeof module !== 'undefined' && module.exports) {
     scoreDeterministic, computeWeightedScore, getScoreBand,
     scoreStructure, scoreClarity, scoreCompleteness, scoreTestability,
     scoreSpecificity, scoreAtomicity, scoreConsistency,
-    // Adequacy gate
     computeAdequacyGate,
   };
 }
+
+export {
+  ALWAYS_AMBIGUOUS, CONTEXTUAL_AMBIGUOUS, VAGUE_QUANTIFIERS, UNDEFINED_REFERENCES,
+  COVERAGE_SIGNALS, TESTABILITY_POSITIVE, TESTABILITY_NEGATIVE, TESTABILITY_VERIFIABLE,
+  UI_OBSERVABLE_PATTERN, UNSUPPORTED_PATTERN,
+  SECTION_HEADERS, SUB_SECTION_PATTERNS,
+  DIMENSION_WEIGHTS, SCORE_BANDS,
+  computeExtractionHints, extractUserStory, detectFormat, detectRequirementType,
+  detectSectionLabels, estimateACCount,
+  computeQualitySignals, computeClaritySignals, computeCompletenessSignals,
+  computeSpecificitySignals, computeAtomicitySignals, computeConsistencySignals,
+  computeRunnerReadinessSignals,
+  scoreDeterministic, computeWeightedScore, getScoreBand,
+  scoreStructure, scoreClarity, scoreCompleteness, scoreTestability,
+  scoreSpecificity, scoreAtomicity, scoreConsistency,
+  computeAdequacyGate,
+};
