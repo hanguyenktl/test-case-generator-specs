@@ -85,6 +85,31 @@ The system is built as a series of specialized agentic calls:
 
 ---
 
+## 🛠️ Local Development & Prototyping
+
+This repository includes a local development environment for previewing and testing agent components and UI prototypes.
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- npm
+
+### Setup & Run
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+2. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+3. **Open the prototype:**
+   Navigate to [http://localhost:5173/](http://localhost:5173/)
+
+### Active Prototypes
+- **TC Quality Scorer (v5.1):** Accessible via the root page. This prototype demonstrates the dual-scoring logic for test case quality and AI readiness. It is located at `snippets/TCDualScorer_v5.jsx` and mounted via `src/main.jsx`.
+
+---
+
 ## 📁 Repository Structure
 
 ### Product Requirements
