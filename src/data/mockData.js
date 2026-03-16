@@ -3,12 +3,42 @@ export const mockRequirement = {
   id: 'TO-9201',
   title: 'View Test Script Code from Test Result Details',
   tester: 'Vuong Thien Phu',
-  testCases: 0,
-  issueType: 'Feature',
+  testCases: 3,
+  issueType: 'Story',
   sprint: 23,
 };
 
-// Citable segments parsed from the requirement text
+export const mockRequirementText = `As a QA Engineer investigating a test failure, I want to view the test script code directly from the test result details, so that I can quickly understand what the test does and identify where it might be failing without leaving TestOps.
+
+DETAILS — ACCESS & ENTRY POINTS
+- "View Script" entry point available in Test Result Details page.
+
+DETAILS — CONTENT DISPLAY
+- Shows full script content with syntax highlighting based on file type (.groovy, .java, .py, .ts). Line numbers are displayed.
+- Automatically scrolls to failing line if available from execution logs.
+- Shows file path relative to repository root. Displays last commit info (SHA, author, message, timestamp).
+
+DETAILS — USER INTERACTIONS
+- Can copy code to clipboard (full script or selected lines). Can scroll through the entire script smoothly.
+- Handles scripts up to 10,000 lines without performance degradation. Script loads within 2 seconds. Syntax highlighting renders progressively. Line numbers displayed correctly.
+
+SCENARIOS — ALLOW VIEW SCRIPT
+1. Git repository is no longer connected to the project → Should still display the script version used for execution with indicators.
+2. Script file was deleted from Git repo → Should still display the script version used for execution with indicators.
+3. Script file contains invalid characters or encoding issues → Display content with best-effort rendering.
+4. Script was moved to another folder/branch that user have authorized to view → Display with updated metadata/path.
+
+SCENARIOS — NOT ALLOW VIEW SCRIPT
+- User doesn't have read permission to the Git repository → Access denied & show permission error.
+- Git access token has expired or been revoked → Authentication Failed & guide user to set up PAT.
+- Script File Exceeds Size Limit → Link to the original file.
+- Binary file or unsupported format → Show unsupported format message.
+- Script moved to unauthorized branch → Show error message.
+- Test case has no Git repository link (uploaded scripts in zip repo).
+- File exists in Git but has no content.
+- Git API returns file content but fails to fetch commit details.`;
+
+// Citable segments parsed from the requirement text (These are now the "Behaviors")
 export const citableSegments = [
   { id: 'SEG-1', type: 'requirement', text: 'As a QA Engineer investigating a test failure, I want to view the test script code directly from the test result details, so that I can quickly understand what the test does and identify where it might be failing without leaving TestOps.' },
   { id: 'SEG-2', type: 'requirement', text: '"View Script" entry point available in Test Result Details page.' },
@@ -32,15 +62,20 @@ export const citableSegments = [
 ];
 
 export const requirementSections = [
-  { title: 'User Story', segments: ['SEG-1'] },
-  { title: 'Details — Access & Entry Points', segments: ['SEG-2'] },
-  { title: 'Details — Content Display', segments: ['SEG-3', 'SEG-4', 'SEG-5'] },
-  { title: 'Details — User Interactions', segments: ['SEG-6', 'SEG-7'] },
-  { title: 'Scenarios — Allow view script', segments: ['SEG-8', 'SEG-9', 'SEG-10', 'SEG-11'] },
-  { title: 'Scenarios — Not allow view script', segments: ['SEG-12', 'SEG-13', 'SEG-14', 'SEG-15', 'SEG-16', 'SEG-17', 'SEG-18', 'SEG-19'] },
+  { title: 'Core Objectives', segments: ['SEG-1', 'SEG-2'] },
+  { title: 'Display & Highlighting', segments: ['SEG-3', 'SEG-4', 'SEG-5'] },
+  { title: 'Interactions & Limits', segments: ['SEG-6', 'SEG-7'] },
+  { title: 'Error & Edge Cases', segments: ['SEG-8', 'SEG-9', 'SEG-10', 'SEG-11', 'SEG-12', 'SEG-13', 'SEG-14', 'SEG-15', 'SEG-16', 'SEG-17', 'SEG-18', 'SEG-19'] }
 ];
 
-// Generated test scenarios with citations
+// Historical Tests from DB
+export const existingLinkedTests = [
+  { id: 'TC-142', name: 'Verify basic UI rendering of View Script button', type: 'manual', priority: 'medium', steps: ['Navigate to test result', 'Verify button exists'], status: 'draft' },
+  { id: 'TC-145', name: 'Check authentication token expiry banner', type: 'automation', priority: 'high', steps: ['Expire token', 'Load page', 'Check banner'], status: 'active' },
+  { id: 'TC-188', name: 'Test 5000 lines scrolling limit', type: 'manual', priority: 'low', steps: ['Load 5000 lines', 'Scroll down'], status: 'active' },
+];
+
+// Generated test scenarios with citations (AI Drafts)
 export const mockCoreTests = [
   { id: 'TC-001', name: 'Verify View Script Button Present on Test Result Details', type: 'positive', priority: 'high', citations: ['SEG-1', 'SEG-2'], citationTypes: ['requirement', 'requirement'],
     steps: ['Navigate to a completed test execution result', 'Locate the Test Result Details page', 'Verify "View Script" entry point is visible and clickable'], feedback: null },

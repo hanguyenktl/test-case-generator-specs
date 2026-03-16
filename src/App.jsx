@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { ChevronDown, ChevronRight, Bell, Sparkles, BookOpen, Wand2, Bot } from 'lucide-react';
+import { ChevronDown, ChevronRight, Bell, Sparkles, BookOpen, Wand2, Bot, Loader2 } from 'lucide-react';
 import { TO } from './utils/theme';
-import { mockRequirement, mockCoreTests, mockAdditionalTests } from './data/mockData';
+import { mockRequirement, mockCoreTests, mockAdditionalTests, existingLinkedTests } from './data/mockData';
 import { SidebarNav } from './components/Shell/SidebarNav';
 import { CitationBadge } from './components/Shared/CitationBadge';
 import { RequirementPanel } from './features/Requirement/RequirementPanel';
@@ -25,6 +25,36 @@ export default function App() {
   const [assessmentStatus, setAssessmentStatus] = useState('analyzing');
   const [additionalContext, setAdditionalContext] = useState('');
   const [activeGenStage, setActiveGenStage] = useState('');
+  
+  // New UI states
+  const [leftWidth, setLeftWidth] = useState(480);
+  const isDragging = React.useRef(false);
+  const [rightTab, setRightTab] = useState('drafts');
+
+  const startDrag = useCallback((e) => {
+    isDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+  }, []);
+
+  React.useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging.current) return;
+      let newWidth = e.clientX;
+      if (newWidth < 400) newWidth = 400;
+      if (newWidth > 800) newWidth = 800;
+      setLeftWidth(newWidth);
+    };
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = 'default';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   // Simulate progressive assessment
   React.useEffect(() => {
@@ -56,15 +86,17 @@ export default function App() {
 
   const doGen = (mode = 'initial') => {
     const src = mode === 'additional' ? mockAdditionalTests : mockCoreTests;
-    setGen(true); setGenProg(0); setGenMode(mode); setActiveGenStage('Extracting scenarios...');
+    setGen(true); setGenProg(0); setGenMode(mode); setActiveGenStage('Reading Jira Ticket...');
     if (mode === 'initial') { setTcs([]); setSts({}); }
 
     // Sequential stage simulation before streaming starts
-    setTimeout(() => { setActiveGenStage('Scoring quality...'); setGenProg(10); }, 1500);
-    setTimeout(() => { setActiveGenStage('Generating test cases...'); setGenProg(30); }, 3000);
+    setTimeout(() => { setActiveGenStage('Extracting Testable Behaviors...'); setGenProg(10); }, 1500);
+    setTimeout(() => { setActiveGenStage('Mapping Edge Cases...'); setGenProg(20); }, 3000);
+    setTimeout(() => { setActiveGenStage('Drafting Test Cases...'); setGenProg(30); }, 4500);
 
     setTimeout(() => {
       setActiveGenStage('');
+      setRightTab('drafts');
       src.forEach((tc, i) => {
         setTimeout(() => {
           setTcs(p => [...p, { ...tc }]); 
@@ -73,8 +105,14 @@ export default function App() {
           if (i === src.length - 1) setTimeout(() => { setGen(false); setHasGen(true); setReview(true); setCanMore(mode === 'initial'); }, 300);
         }, 500 * (i + 1));
       });
-    }, 4500);
+    }, 6000);
   };
+
+  // Compute score for Sticky Action Bar
+  const resolvedCount = clarifs.filter(c => c.resolved).length;
+  let baseScore = 62;
+  if (assessmentStatus === 'callB_done') baseScore = 74;
+  let activeScore = Math.min(baseScore + resolvedCount * 10 + (docs.length > 0 ? 10 : 0), 98);
 
   const getStats = () => { 
     const safe = tcs.filter(t => t?.id); 
@@ -123,7 +161,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: TO.pageBg, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+    <div className="flex h-screen" style={{ width: '100vw', maxWidth: '100%', backgroundColor: TO.pageBg, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
       <SidebarNav />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
@@ -160,112 +198,225 @@ export default function App() {
         </div>
         
         {/* Main Content Area */}
-        <main className="flex-1 overflow-hidden bg-white">
-          <div className="flex h-full">
-            {/* LEFT COLUMN: Requirement & Processing */}
-            <div className={`flex-shrink-0 overflow-y-auto p-6 space-y-4 transition-all duration-300 ${gen || hasGen ? 'w-[400px] border-r border-gray-200' : 'w-full max-w-5xl mx-auto'}`}>
-              <AIGeneratorPanel 
-                assessmentStatus={assessmentStatus}
-                clarifications={clarifs} 
-                onResolve={(id, ans) => setClarifs(p => p.map(c => c.id === id ? { ...c, resolved: ans !== null, resolvedAnswer: ans } : c))}
-                documents={docs} 
-                onUpload={(d) => setDocs(p => { const e = p.find(x => x.id === d.id); return e ? p.map(x => x.id === d.id ? d : x) : [...p, d]; })} 
-                onRemoveDoc={(id) => setDocs(p => p.filter(d => d.id !== id))}
-                additionalContext={additionalContext}
-                onContextChange={setAdditionalContext}
-                onGenerate={doGen} 
-                isGenerating={gen} 
-                hasGenerated={hasGen} 
-                depth={depth} 
-                onDepthChange={setDepth}
-                onAskKai={(p) => { setKaiP(p); setShowKai(true); }} 
-              />
-              <RequirementPanel 
-                highlightedSegments={hlSegs} 
-                onSegmentHover={(id) => setHlSegs([id])} 
-                onSegmentLeave={() => setHlSegs([])} 
-              />
-            </div>
-            
-            {/* RIGHT COLUMN: Test Case List & Generation (Only visible during/after generation) */}
-            {(gen || hasGen) && (
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col h-full relative" style={{ backgroundColor: TO.pageBg }}>
+        <main className="flex-1 overflow-hidden bg-white w-full">
+          <div className="flex h-full w-full">
+            {/* LEFT COLUMN: Requirement Panels & AI Assessment */}
+            <div className="flex-shrink-0 flex flex-col h-full border-r border-gray-200 bg-white z-10 shadow-[2px_0_8px_-4px_rgba(0,0,0,0.1)] relative" style={{ width: leftWidth }}>
+              <div className="p-4 flex-shrink-0 border-b border-gray-100">
+                <AIGeneratorPanel 
+                  assessmentStatus={assessmentStatus}
+                  clarifications={clarifs} 
+                  onResolve={(id, ans) => setClarifs(p => p.map(c => c.id === id ? { ...c, resolved: ans !== null, resolvedAnswer: ans } : c))}
+                  documents={docs} 
+                  onUpload={(d) => setDocs(p => { const e = p.find(x => x.id === d.id); return e ? p.map(x => x.id === d.id ? d : x) : [...p, d]; })} 
+                  onRemoveDoc={(id) => setDocs(p => p.filter(d => d.id !== id))}
+                  additionalContext={additionalContext}
+                  onContextChange={setAdditionalContext}
+                  onGenerate={doGen} 
+                  isGenerating={gen} 
+                  hasGenerated={hasGen} 
+                  depth={depth} 
+                  onDepthChange={setDepth}
+                  onAskKai={(p) => { setKaiP(p); setShowKai(true); }} 
+                />
+              </div>
+              <div className="flex-1 overflow-hidden p-4 min-h-0 bg-white">
+                <RequirementPanel 
+                  highlightedSegments={hlSegs} 
+                  onSegmentHover={(id) => setHlSegs([id])} 
+                  onSegmentLeave={() => setHlSegs([])} 
+                  isAssessmentDone={assessmentStatus !== 'analyzing'}
+                  hasGenerated={hasGen || tcs.length > 0}
+                />
+              </div>
               
-              {/* Active Generation State */}
+              {/* Sticky Generate Action Bar */}
+              <div className="p-4 border-t border-gray-200 bg-white flex flex-col gap-2 shadow-[0_-4px_6px_-4px_rgba(0,0,0,0.05)] z-20">
+                {assessmentStatus === 'analyzing' ? (
+                  <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 justify-center mb-1">
+                    <Loader2 size={12} className="animate-spin" /> AI is analyzing requirement for improvements...
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5 justify-center mb-1">
+                    <span className="font-bold" style={{ color: activeScore >= 85 ? TO.passed : activeScore >= 70 ? TO.warning : '#F97316' }}>Quality Score: {activeScore}%</span> 
+                    • 💡 {clarifs.length - resolvedCount} clarifications can improve this
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <div className="flex rounded-md border overflow-hidden flex-shrink-0" style={{ borderColor: TO.cardBd }}>
+                    {['quick', 'thorough'].map(d => (
+                      <button key={d} onClick={() => setDepth(d)} className="px-2.5 py-1 text-[11px] font-medium transition-colors"
+                        style={{ backgroundColor: depth === d ? TO.aiAccent : 'white', color: depth === d ? 'white' : TO.textSecondary }}>
+                        {d === 'quick' ? '⚡ Quick' : '🔍 Thorough'}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => doGen('initial')} disabled={gen || hasGen}
+                    className="flex-1 py-1.5 text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    style={{ backgroundColor: gen || hasGen ? TO.textMuted : TO.aiAccent }}>
+                    {gen ? <><Loader2 size={15} className="animate-spin" />Generating...</> : <><Wand2 size={15} />Generate Test Cases</>}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Draggable Resizer */}
+            <div 
+              className="w-1 cursor-col-resize hover:bg-indigo-300 transition-colors z-20 flex-shrink-0"
+              style={{ backgroundColor: isDragging.current ? '#818CF8' : 'transparent' }}
+              onMouseDown={startDrag}
+            />
+            
+            {/* RIGHT COLUMN: AI Generation & Test Lists */}
+            <div className="flex-1 p-5 overflow-hidden flex flex-col bg-slate-50 relative">
+              
+              {/* Active Generation State / Thought Progress */}
               {gen && (
-                <div className="rounded-lg border overflow-hidden flex-shrink-0 mb-3" style={{ borderColor: '#C4B5FD', backgroundColor: '#F5F3FF' }}>
-                  <div className="px-4 py-2.5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Wand2 size={14} className="animate-pulse" style={{ color: TO.aiAccent }} />
-                      <span className="text-sm font-medium" style={{ color: '#5B21B6' }}>
-                        {activeGenStage || (genMode === 'additional' ? 'Streaming additional tests...' : 'Streaming test cases...')}
+                <div className="rounded-lg border overflow-hidden flex-shrink-0 mb-4 shadow-sm" style={{ borderColor: '#C4B5FD', backgroundColor: '#F5F3FF' }}>
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Wand2 size={15} className="animate-pulse" style={{ color: TO.aiAccent }} />
+                      <span className="text-sm font-semibold" style={{ color: '#5B21B6' }}>
+                        {activeGenStage || (genMode === 'additional' ? 'Drafting additional tests...' : 'Drafting test cases...')}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold" style={{ color: TO.aiAccent }}>
-                      {activeGenStage ? 'Initializing...' : `${tcs.length}/${genMode === 'additional' ? mockAdditionalTests.length : mockCoreTests.length}`}
+                    <span className="text-xs font-semibold" style={{ color: TO.aiAccent }}>
+                      {activeGenStage ? 'Thinking...' : `${tcs.length}/${genMode === 'additional' ? mockAdditionalTests.length : mockCoreTests.length} Drafted`}
                     </span>
                   </div>
                   <div className="h-1.5" style={{ backgroundColor: '#DDD6FE' }}>
-                    <div className="h-full transition-all duration-300" style={{ width: `${genProg}%`, backgroundColor: TO.aiAccent }} />
+                    <div className="h-full transition-all duration-300 ease-out" style={{ width: `${genProg}%`, backgroundColor: TO.aiAccent }} />
                   </div>
                 </div>
               )}
 
-              {/* Unified Workspace */}
-              {hasGen && (
-                <div className="flex-1 min-h-0 flex flex-col">
-                  {(saved.length > 0 || tcs.length > 0) && <CoverageSummary savedTests={[...saved]} canMore={canMore} onGenMore={() => doGen('additional')} onCitHover={citHover} onCitLeave={citLeave} />}
-                  
-                  {saved.length > 0 && (
-                    <div className="bg-white rounded-lg border overflow-hidden mb-4 flex-shrink-0" style={{ borderColor: TO.cardBd }}>
-                      <div className="px-4 py-2 border-b flex items-center justify-between" style={{ backgroundColor: '#FAFAFA', borderColor: TO.cardBd }}>
-                        <h2 className="text-sm font-semibold" style={{ color: TO.textPrimary }}>Accepted Test Cases</h2>
-                        <span className="text-xs" style={{ color: TO.textSecondary }}>{saved.length} items</span>
-                      </div>
-                      <div>
-                        {saved.map((tc, i) => (
-                          <div key={`saved-${tc.id}`} className="flex items-center gap-2.5 px-4 py-2.5 border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors" style={{ borderColor: '#F3F4F6' }}
-                            onMouseEnter={() => citHover(tc.citations || [])} onMouseLeave={citLeave}>
-                            <span className="text-[11px] w-4" style={{ color: TO.textMuted }}>{i + 1}</span>
-                            <BookOpen size={13} style={{ color: TO.textMuted }} />
-                            <span className="text-[11px] font-mono font-medium truncate w-20" style={{ color: TO.link }}>{tc.id}</span>
-                            <span className="text-sm font-medium flex-1 truncate" style={{ color: TO.textBody }}>{tc.name}</span>
-                            <div className="flex items-center gap-1.5 flex-shrink-0 border-l pl-3" style={{ borderColor: TO.cardBd }}>
-                              <span className="text-xs text-gray-500 w-24 text-center pb-0.5">MANUAL</span>
-                              <span className="text-xs text-green-600 font-medium w-24 text-center pb-0.5">DRAFT</span>
-                              <div className="w-6 h-6 rounded flex items-center justify-center bg-purple-100 text-purple-700" title="AI Generated">
-                                <Sparkles size={11} className="fill-current" />
+              <div className="flex-1 min-h-0 flex flex-col">
+                {/* Unified AI Workspace (Generated Drafts) */}
+                {(saved.length > 0 || tcs.length > 0) && (
+                  <div className="mb-4 flex-shrink-0">
+                    <CoverageSummary savedTests={[...saved]} canMore={canMore} onGenMore={() => doGen('additional')} onCitHover={citHover} onCitLeave={citLeave} />
+                  </div>
+                )}
+
+                {/* Conditional Tab Rendering */}
+                {(!hasGen && tcs.length === 0 && saved.length === 0) ? (
+                  /* Initial State: Only show Linked Tests */
+                  <div className="flex-1 min-h-0 flex flex-col">
+                    <div className="flex items-center justify-between mb-3 px-1">
+                      <h3 className="text-sm font-semibold text-slate-800">Linked Test Cases</h3>
+                      <span className="text-xs font-medium bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">{existingLinkedTests.length} items</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto">
+                      <div className="space-y-2">
+                        {existingLinkedTests.map((tc, idx) => (
+                          <div key={tc.id} className="bg-white border rounded-lg p-3 shadow-sm hover:shadow hover:border-slate-300 transition-all cursor-pointer">
+                            <div className="flex items-start justify-between gap-3 mb-1">
+                              <div className="flex items-center gap-2">
+                                 <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{tc.id}</span>
+                                 <span className="text-sm font-medium text-slate-800 line-clamp-1">{tc.name}</span>
                               </div>
+                            </div>
+                            <div className="flex items-center gap-3 mt-2">
+                               <span className="text-[10px] px-1.5 py-0.5 rounded border uppercase text-slate-500 bg-slate-50">{tc.type}</span>
+                               <span className="text-[10px] text-slate-500">{tc.steps.length} steps</span>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                  )}
+                  </div>
+                ) : (
+                  /* Post-Generation State: Show Tabs */
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex items-center gap-2 mb-4 p-1 bg-slate-200/60 rounded-lg w-fit flex-shrink-0">
+                      {tcs.length > 0 && (
+                        <button onClick={() => setRightTab('drafts')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all shadow-sm ${rightTab === 'drafts' ? 'bg-white text-indigo-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200 shadow-none'}`}>
+                          AI Drafts For Review ({tcs.length})
+                        </button>
+                      )}
+                      <button onClick={() => setRightTab('linked')} className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all shadow-sm ${rightTab === 'linked' || tcs.length === 0 ? 'bg-white text-indigo-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200 shadow-none'}`}>
+                        Linked Test Cases ({existingLinkedTests.length + saved.length})
+                      </button>
+                    </div>
 
-                  {tcs.length > 0 && (
-                    <div className="flex flex-col flex-1 min-h-0">
-                      {saved.length > 0 && (
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="flex-1 h-px" style={{ backgroundColor: '#E5E7EB' }} />
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-100 flex items-center gap-1.5 shadow-sm"><Sparkles size={12} /> AI Generated Review</span>
-                          <div className="flex-1 h-px" style={{ backgroundColor: '#E5E7EB' }} />
+                    <div className="flex-1 overflow-y-auto min-h-0 pb-10">
+                      {(rightTab === 'linked' || tcs.length === 0) && (
+                        <div className="space-y-4">
+                          {saved.length > 0 && (
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg shadow-sm overflow-hidden mt-1 mb-4">
+                              <div className="px-5 py-3 border-b border-emerald-100 flex items-center justify-between bg-white">
+                                  <div className="flex items-center gap-2">
+                                    <h2 className="text-sm font-semibold text-emerald-800">Ready to Push ({saved.length})</h2>
+                                  </div>
+                                  <div className="flex items-center border rounded-md shadow-sm overflow-hidden" style={{ borderColor: TO.cardBd }}>
+                                    <div className="px-3 py-1.5 text-[11px] font-medium bg-white text-slate-600 border-r flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                                      <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                      Save to: Katalon Cloud / eComm
+                                      <ChevronDown size={12} className="text-slate-400" />
+                                    </div>
+                                    <button onClick={() => setSaved([])} className="px-4 py-1.5 text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                                      Save All to TestOps
+                                    </button>
+                                  </div>
+                              </div>
+                              <div className="divide-y divide-emerald-100/50 bg-white">
+                                {saved.map((tc, i) => (
+                                  <div key={`saved-${tc.id}`} className="grid grid-cols-[80px_1fr_120px_40px] items-center gap-3 px-5 py-2 hover:bg-slate-50 cursor-pointer transition-colors"
+                                    onMouseEnter={() => citHover(tc.citations || [])} onMouseLeave={citLeave}>
+                                    <div className="text-[11px] font-mono font-medium text-emerald-700 bg-emerald-50/50 px-1.5 py-0.5 rounded w-fit border border-emerald-200/50">{tc.id}</div>
+                                    <div className="text-sm font-medium text-slate-800 truncate pr-4">{tc.name}</div>
+                                    <div className="flex items-center gap-1.5">
+                                       <span className="text-[10px] px-1.5 py-0.5 rounded border uppercase text-slate-500 bg-slate-50">{tc.type}</span>
+                                       <span className="text-[10px] text-slate-500">{tc.steps?.length || 0} steps</span>
+                                    </div>
+                                    <div className="flex justify-center">
+                                      <div className="w-5 h-5 rounded-full flex items-center justify-center bg-emerald-100 text-emerald-600">
+                                        <Sparkles size={10} className="fill-current" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            {existingLinkedTests.map((tc, idx) => (
+                              <div key={tc.id} className="bg-white border rounded-lg p-3 shadow-sm hover:shadow hover:border-slate-300 transition-all cursor-pointer">
+                                <div className="flex items-start justify-between gap-3 mb-1">
+                                  <div className="flex items-center gap-2">
+                                     <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{tc.id}</span>
+                                     <span className="text-sm font-medium text-slate-800 line-clamp-1">{tc.name}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3 mt-2">
+                                   <span className="text-[10px] px-1.5 py-0.5 rounded border uppercase text-slate-500 bg-slate-50">{tc.type}</span>
+                                   <span className="text-[10px] text-slate-500">{tc.steps.length} steps</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
-                      <ReviewList 
-                        tests={tcs} statuses={sts} 
-                        editingId={editId} editForm={editF} setEditForm={setEditF} 
-                        handlers={handlers} stats={getStats()} 
-                        onCitHover={citHover} onCitLeave={citLeave} 
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
 
-              {/* Empty State is now handled by the full width left panel view */}
+                      {rightTab === 'drafts' && tcs.length > 0 && (
+                        <div className="flex flex-col gap-4">
+
+                          {tcs.length > 0 && (
+                            <ReviewList 
+                              tests={tcs} statuses={sts} 
+                              editingId={editId} editForm={editF} setEditForm={setEditF} 
+                              handlers={handlers} stats={getStats()} 
+                              onCitHover={citHover} onCitLeave={citLeave} 
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            )}
           </div>
         </main>
       </div>

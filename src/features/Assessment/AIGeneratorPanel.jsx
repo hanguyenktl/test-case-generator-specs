@@ -5,7 +5,7 @@ import { DocUpload } from '../../components/Shared/DocUpload';
 import { ClarificationItem } from './ClarificationItem';
 
 export const AIGeneratorPanel = ({ assessmentStatus, clarifications, onResolve, documents, onUpload, onRemoveDoc, additionalContext, onContextChange, onGenerate, isGenerating, hasGenerated, depth, onDepthChange, onAskKai }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const resolved = clarifications.filter(c => c.resolved).length;
   const total = clarifications.length;
   
@@ -73,25 +73,6 @@ export const AIGeneratorPanel = ({ assessmentStatus, clarifications, onResolve, 
       </div>
       {expanded && (
         <div className="px-4 pb-4 space-y-3">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium" style={{ color: TO.textSecondary }}>Depth:</span>
-              <div className="flex rounded-md border overflow-hidden" style={{ borderColor: TO.cardBd }}>
-                {['quick', 'thorough'].map(d => (
-                  <button key={d} onClick={() => onDepthChange(d)} className="px-2.5 py-1 text-[11px] font-medium transition-colors"
-                    style={{ backgroundColor: depth === d ? TO.aiAccent : 'white', color: depth === d ? 'white' : TO.textSecondary }}>
-                    {d === 'quick' ? '⚡ Quick' : '🔍 Thorough'}
-                  </button>
-                ))}
-              </div>
-              <span className="text-[10px]" style={{ color: TO.textMuted }}>{depth === 'quick' ? 'Core scenarios' : 'All scenarios + edge cases'}</span>
-            </div>
-            <button onClick={() => onGenerate('initial')} disabled={isGenerating || hasGenerated}
-              className="w-full py-2.5 text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-              style={{ backgroundColor: isGenerating || hasGenerated ? TO.textMuted : TO.aiAccent }}>
-              {isGenerating ? <><Loader2 size={15} className="animate-spin" />Generating...</> : hasGenerated ? <><CheckCircle2 size={15} />Generated — Review on Right</> : <><Wand2 size={15} />Generate Test Cases</>}
-            </button>
-          </div>
           {total > 0 && (
             <div>
               <div className="flex items-center justify-between mb-1.5">

@@ -21,7 +21,7 @@ export const ReviewList = ({ tests, statuses, editingId, editForm, setEditForm, 
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50/30">
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div className="w-full space-y-4">
           {tests.map(t => (
             <TestCard key={t.id} test={t} status={statuses[t.id]} 
               isEditing={editingId === t.id} editForm={editForm} setEditForm={setEditForm}
