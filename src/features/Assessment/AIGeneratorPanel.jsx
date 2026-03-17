@@ -1,103 +1,200 @@
 import React, { useState } from 'react';
-import { Sparkles, ChevronUp, ChevronDown, CheckCircle2, Wand2, Lightbulb, Loader2, Bot } from 'lucide-react';
+import { Sparkles, ChevronDown, ChevronUp, Lightbulb, FileUp, X, Loader2, CheckCircle2, Circle, Info } from 'lucide-react';
 import { TO } from '../../utils/theme';
-import { DocUpload } from '../../components/Shared/DocUpload';
-import { ClarificationItem } from './ClarificationItem';
 
-export const AIGeneratorPanel = ({ assessmentStatus, clarifications, onResolve, documents, onUpload, onRemoveDoc, additionalContext, onContextChange, onGenerate, isGenerating, hasGenerated, depth, onDepthChange, onAskKai }) => {
+// Deterministic scoring criteria — always visible
+const BASE_CRITERIA = [
+  { label: 'Has user story structure', met: true, pts: 15 },
+  { label: 'Contains acceptance criteria', met: true, pts: 12 },
+  { label: 'Specifies entry points', met: true, pts: 10 },
+  { label: 'Defines user interactions', met: true, pts: 10 },
+  { label: 'Covers error / edge cases', met: false, pts: 0, maxPts: 10 },
+  { label: 'Has clear scope boundaries', met: false, pts: 0, maxPts: 5 },
+];
+
+// LLM-derived criteria — only appear after analysis
+const LLM_CRITERIA = [
+  { label: 'Scenarios identifiable', met: true, pts: 8 },
+  { label: 'Ambiguity level is low', met: true, pts: 4 },
+];
+
+export const AIGeneratorPanel = ({
+  clarifications = [], onResolve,
+  additionalContext = '', onContextChange,
+  documents = [], onUpload, onRemoveDoc,
+  assessmentStatus = 'ready', // 'analyzing' | 'done'
+}) => {
   const [expanded, setExpanded] = useState(false);
-  const resolved = clarifications.filter(c => c.resolved).length;
-  const total = clarifications.length;
-  
-  let baseScore = 62;
-  if (assessmentStatus === 'callB_done') baseScore = 74;
-  let score = baseScore + resolved * 10 + (documents.length > 0 ? 10 : 0);
-  score = Math.min(score, 98);
-  
-  const color = score >= 85 ? TO.passed : score >= 70 ? TO.warning : '#F97316';
-  
-  // Status text logic based on progressive state
-  let statusText = 'Refining...';
-  if (assessmentStatus === 'callA_done') statusText = 'Score refining...';
-  if (assessmentStatus === 'callB_done') statusText = 'Ready';
+  const unresolvedCount = clarifications.filter(c => !c.resolved).length;
+  const resolvedCount = clarifications.filter(c => c.resolved).length;
+  const isAnalyzing = assessmentStatus === 'analyzing';
+
+  // Score: deterministic base appears instantly, bumps when LLM finishes
+  const baseScore = BASE_CRITERIA.reduce((s, c) => s + c.pts, 0); // 47
+  const llmBonus = !isAnalyzing ? LLM_CRITERIA.reduce((s, c) => s + c.pts, 0) : 0; // 12
+  const contextBonus = resolvedCount * 5 + (documents.length > 0 ? 5 : 0) + (additionalContext.length > 20 ? 3 : 0);
+  let score = Math.min(baseScore + llmBonus + contextBonus + 15, 98); // +15 baseline offset
+
+  const scoreColor = score >= 85 ? '#10B981' : score >= 70 ? '#F59E0B' : '#F97316';
+  const scoreLabel = score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : 'Needs Improvement';
 
   return (
-    <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#C4B5FD', background: 'linear-gradient(to bottom, #F5F3FF, #FFFFFF)' }}>
-      <div className="px-4 py-3 cursor-pointer hover:bg-purple-50/30 transition-colors border-b" style={{ borderColor: '#EDE9FE' }} onClick={() => setExpanded(!expanded)}>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: TO.aiAccent }}><Sparkles size={15} className="text-white" /></div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold" style={{ color: TO.textPrimary }}>AI Assessment</h3>
-                {assessmentStatus !== 'callB_done' && <Loader2 size={12} className="animate-spin" style={{ color: TO.aiAccent }} />}
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[11px]" style={{ color: TO.textSecondary }}>Readiness:</span>
-                <span className="text-xs font-bold" style={{ color }}>{score}%</span>
-                <span className="text-[10px] uppercase font-medium ml-1" style={{ color }}>{score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : 'Needs Refinement'}</span>
-              </div>
-            </div>
-          </div>
-          {expanded ? <ChevronUp size={15} style={{ color: TO.textMuted }} /> : <ChevronDown size={15} style={{ color: TO.textMuted }} />}
-        </div>
-        
-        {/* Progressive Analysis Details visible even when not expanded if analyzing */}
-        <div className="mt-3 space-y-1.5 pl-10">
-          <div className="flex gap-1 items-center h-1.5 bg-gray-200 rounded-full overflow-hidden w-full max-w-[150px] mb-2">
-            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, backgroundColor: color }} />
-          </div>
-          
-          <div className="text-[10px]" style={{ color: TO.textSecondary }}>
-            <div>Structure: 19 items • Feature</div>
-            {assessmentStatus === 'analyzing' && (
-              <div className="mt-1 flex gap-2 flex-wrap">
-                <span className="text-amber-600 font-medium">⚠ 3 ambiguous terms</span>
-                <span className="text-gray-500">○ Missing: error handling, boundaries</span>
-              </div>
-            )}
-            {assessmentStatus === 'callA_done' && (
-              <div className="mt-1">
-                <div className="text-green-600 font-medium flex items-center gap-1"><CheckCircle2 size={10} /> 19 testable scenarios extracted</div>
-                <div className="text-gray-500 mt-0.5">6 behavior • 5 edge_case • 6 error_handling • 1 constraint • 1 happy_path</div>
-              </div>
-            )}
-            {assessmentStatus === 'callB_done' && (
-              <div className="mt-1">
-                <div className="text-green-600 font-medium flex items-center gap-1"><CheckCircle2 size={10} /> 19 testable scenarios extracted</div>
-                <div className="text-amber-600 font-medium flex items-center gap-1 mt-0.5">⚠ {total - resolved} clarifications available</div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      {expanded && (
-        <div className="px-4 pb-4 space-y-3">
-          {total > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <h4 className="text-xs font-medium flex items-center gap-1" style={{ color: TO.textBody }}><Lightbulb size={11} style={{ color: TO.warning }} />Resolve to improve results</h4>
-                <span className="text-[10px]" style={{ color: TO.textMuted }}>{resolved}/{total}</span>
-              </div>
-              <div className="space-y-1.5">{clarifications.map(i => <ClarificationItem key={i.id} item={i} onResolve={onResolve} />)}</div>
-            </div>
-          )}
-          
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-medium" style={{ color: TO.textSecondary }}>Additional context (optional):</span>
-            <textarea 
-              value={additionalContext}
-              onChange={(e) => onContextChange(e.target.value)}
-              placeholder="e.g., related features, constraints, team conventions..."
-              className="w-full text-[13px] rounded-lg border p-2.5 focus:outline-none focus:ring-1 transition-all resize-none min-h-[60px]"
-              style={{ borderColor: TO.cardBd, backgroundColor: '#FAFAFA', color: TO.textBody, '--tw-ring-color': TO.aiAccent }}
-            />
+    <div className="space-y-2">
+      {/* Readiness bar — elegant, compact, light */}
+      <div
+        className="rounded-lg cursor-pointer transition-all duration-200 hover:bg-slate-50"
+        style={{ border: '1px solid #E5E7EB', backgroundColor: '#FAFBFC' }}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="px-3 py-2 flex items-center gap-3">
+          <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: '#F3F0FF' }}>
+            <Sparkles size={12} className="text-violet-500" />
           </div>
 
-          <DocUpload documents={documents} onUpload={onUpload} onRemove={onRemoveDoc} />
-          <button onClick={() => onAskKai('Help me understand the test coverage needs for this requirement')}
-            className="w-full py-1.5 text-xs rounded-lg flex items-center justify-center gap-1.5 hover:bg-purple-50 transition-colors"
-            style={{ color: TO.aiAccent, border: '1px dashed #C4B5FD' }}><Bot size={12} />Ask Kai for help</button>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="text-[11px] font-medium text-slate-500">Readiness</span>
+            <span className="text-sm font-bold" style={{ color: scoreColor }}>{score}%</span>
+            <span className="text-[9px] uppercase font-semibold tracking-wide" style={{ color: scoreColor }}>{scoreLabel}</span>
+            {isAnalyzing && <Loader2 size={10} className="animate-spin text-slate-400" />}
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!isAnalyzing && unresolvedCount > 0 && (
+              <span className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
+                <Lightbulb size={9} />{unresolvedCount} tip{unresolvedCount > 1 ? 's' : ''}
+              </span>
+            )}
+            {isAnalyzing && (
+              <span className="text-[10px] text-slate-400">Analyzing...</span>
+            )}
+            {expanded ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
+          </div>
+        </div>
+
+        <div className="h-1 mx-3 mb-2 rounded-full overflow-hidden" style={{ backgroundColor: '#F1F5F9' }}>
+          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, backgroundColor: scoreColor }} />
+        </div>
+      </div>
+
+      {/* Expanded section */}
+      {expanded && (
+        <div className="space-y-2 pl-0.5">
+
+          {/* Score Rationale */}
+          <div className="rounded-lg p-2.5" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+              <Info size={9} />Score Breakdown
+            </p>
+            <div className="space-y-0.5">
+              {BASE_CRITERIA.map((c, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-[10px]">
+                  {c.met
+                    ? <CheckCircle2 size={10} className="text-emerald-500 flex-shrink-0" />
+                    : <Circle size={10} className="text-slate-300 flex-shrink-0" />
+                  }
+                  <span className={c.met ? 'text-slate-600' : 'text-slate-400'}>{c.label}</span>
+                  <span className="ml-auto font-mono text-[9px]" style={{ color: c.met ? '#10B981' : '#CBD5E1' }}>
+                    {c.met ? `+${c.pts}` : `+${c.maxPts || 0}`}
+                  </span>
+                </div>
+              ))}
+              {!isAnalyzing && LLM_CRITERIA.map((c, i) => (
+                <div key={`llm-${i}`} className="flex items-center gap-1.5 text-[10px]">
+                  <CheckCircle2 size={10} className="text-violet-500 flex-shrink-0" />
+                  <span className="text-slate-600">{c.label}</span>
+                  <span className="text-[8px] px-1 rounded bg-violet-50 text-violet-500 font-medium ml-1">AI</span>
+                  <span className="ml-auto font-mono text-[9px] text-violet-500">+{c.pts}</span>
+                </div>
+              ))}
+              {isAnalyzing && (
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                  <Loader2 size={10} className="animate-spin" />
+                  <span>AI analysis in progress...</span>
+                </div>
+              )}
+              {/* Dynamic boosts */}
+              {resolvedCount > 0 && (
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <CheckCircle2 size={10} className="text-emerald-500 flex-shrink-0" />
+                  <span className="text-slate-600">Clarifications resolved ({resolvedCount})</span>
+                  <span className="ml-auto font-mono text-[9px] text-emerald-500">+{resolvedCount * 5}</span>
+                </div>
+              )}
+              {documents.length > 0 && (
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <CheckCircle2 size={10} className="text-emerald-500 flex-shrink-0" />
+                  <span className="text-slate-600">Supporting docs attached</span>
+                  <span className="ml-auto font-mono text-[9px] text-emerald-500">+5</span>
+                </div>
+              )}
+              {additionalContext.length > 20 && (
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <CheckCircle2 size={10} className="text-emerald-500 flex-shrink-0" />
+                  <span className="text-slate-600">Additional context provided</span>
+                  <span className="ml-auto font-mono text-[9px] text-emerald-500">+3</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Clarifications — only show after LLM is done */}
+          {!isAnalyzing && clarifications.filter(c => !c.resolved).map(c => (
+            <div key={c.id} className="rounded-lg p-2.5 space-y-2"
+              style={{ backgroundColor: '#FEFCE8', border: '1px solid #FEF08A' }}>
+              <p className="text-[11px] font-medium text-slate-700 flex items-center gap-1.5">
+                <Lightbulb size={11} className="text-amber-500 flex-shrink-0" />
+                {c.question}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {c.suggestions.map((s, i) => (
+                  <button key={i} onClick={(e) => { e.stopPropagation(); onResolve(c.id, s); }}
+                    className="px-2 py-1 text-[10px] rounded-md font-medium bg-white text-slate-600 hover:bg-violet-50 hover:text-violet-700 transition-colors shadow-sm"
+                    style={{ border: '1px solid #E5E7EB' }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Resolved — very compact */}
+          {clarifications.filter(c => c.resolved).map(c => (
+            <div key={c.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px]"
+              style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+              <CheckCircle2 size={10} className="text-emerald-500 flex-shrink-0" />
+              <span className="text-slate-500 truncate flex-1">{c.question}</span>
+              <span className="text-emerald-700 font-semibold flex-shrink-0">{c.resolvedAnswer}</span>
+            </div>
+          ))}
+
+          {/* Context + Upload — compact */}
+          <div className="space-y-1.5">
+            <textarea
+              value={additionalContext}
+              onChange={(e) => onContextChange(e.target.value)}
+              placeholder="Add context: related features, constraints..."
+              className="w-full text-[11px] rounded-lg border p-2 focus:outline-none focus:ring-1 focus:ring-violet-200 transition-all resize-none min-h-[40px]"
+              style={{ borderColor: '#E5E7EB', backgroundColor: '#FAFAFA', color: TO.textBody }}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {documents.map(d => (
+                <div key={d.id} className="flex items-center gap-1 px-2 py-0.5 text-[9px] bg-violet-50 rounded text-violet-700 font-medium border border-violet-100">
+                  <span className="truncate max-w-[80px]">{d.name}</span>
+                  <button onClick={(e) => { e.stopPropagation(); onRemoveDoc(d.id); }} className="text-violet-400 hover:text-red-500"><X size={8} /></button>
+                </div>
+              ))}
+              <label className="px-2 py-0.5 text-[9px] border border-dashed rounded text-slate-400 hover:text-violet-600 hover:border-violet-300 cursor-pointer transition-all font-medium"
+                style={{ borderColor: '#D1D5DB' }}>
+                <FileUp size={9} className="inline mr-0.5" />Upload
+                <input type="file" className="hidden" onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) onUpload({ id: Date.now(), name: f.name, type: f.type });
+                }} />
+              </label>
+            </div>
+          </div>
         </div>
       )}
     </div>

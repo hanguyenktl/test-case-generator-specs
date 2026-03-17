@@ -1,94 +1,64 @@
-import React, { useState } from 'react';
-import { FileText, ListTree, Network } from 'lucide-react';
-import { TO, CITATION_COLORS } from '../../utils/theme';
-import { citableSegments, requirementSections, mockRequirementText } from '../../data/mockData';
-import { CitationBadge } from '../../components/Shared/CitationBadge';
-import { TraceMapCanvas } from '../Trace/TraceMapCanvas';
+import React, { useMemo, useRef, useEffect } from 'react';
+import { FileText } from 'lucide-react';
+import { TO } from '../../utils/theme';
+import { mockRequirementText } from '../../data/mockData';
 
-export const RequirementPanel = ({ highlightedSegments, onSegmentHover, onSegmentLeave, isAssessmentDone, hasGenerated }) => {
-  const [activeTab, setActiveTab] = useState('original');
+export const RequirementPanel = ({ highlightedParagraphs = [] }) => {
+  const paragraphs = useMemo(() => {
+    return mockRequirementText.split('\n\n').map((text, index) => ({
+      index,
+      text: text.trim(),
+    }));
+  }, []);
 
-  const tabs = [
-    { id: 'original', label: 'Original Ticket', icon: <FileText size={14} /> },
-  ];
-  
-  if (isAssessmentDone) {
-    tabs.push({ id: 'behaviors', label: 'Extracted Behaviors', icon: <ListTree size={14} /> });
-  }
-  
-  if (hasGenerated) {
-    tabs.push({ id: 'map', label: 'Trace Map', icon: <Network size={14} /> });
-  }
+  const paraRefs = useRef({});
+  const scrollContainerRef = useRef(null);
+
+  // Scroll to first highlighted paragraph
+  useEffect(() => {
+    if (highlightedParagraphs.length > 0) {
+      const firstIdx = highlightedParagraphs[0];
+      const el = paraRefs.current[firstIdx];
+      if (el && scrollContainerRef.current) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [highlightedParagraphs]);
 
   return (
     <div className="bg-white rounded-lg border h-full flex flex-col overflow-hidden shadow-sm" style={{ borderColor: TO.cardBd }}>
-      {/* Tabs Header */}
-      <div className="flex items-center gap-1 px-2 pt-2 border-b bg-gray-50/50" style={{ borderColor: TO.cardBd }}>
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-md transition-colors relative ${activeTab === tab.id ? 'text-indigo-700 bg-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
-          >
-            {tab.icon}
-            {tab.label}
-            {activeTab === tab.id && <div className="absolute bottom-[-1px] left-0 w-full h-0.5 bg-indigo-600" />}
-          </button>
-        ))}
+      <div className="flex items-center gap-2 px-5 py-3 border-b bg-gray-50/50 flex-shrink-0" style={{ borderColor: TO.cardBd }}>
+        <FileText size={14} style={{ color: TO.textSecondary }} />
+        <h3 className="text-sm font-semibold" style={{ color: TO.textPrimary }}>Requirement</h3>
+        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 ml-auto">Synced from Jira</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full relative">
-        {activeTab === 'original' && (
-          <div className="p-6">
-            <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-slate-700">
-              {mockRequirementText}
-            </pre>
-          </div>
-        )}
-
-        {activeTab === 'behaviors' && (
-          <div className="p-6 space-y-5">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold" style={{ color: TO.textPrimary }}>Testable Behaviors Context</h3>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#F5F3FF', color: TO.aiAccent }}>
-                {citableSegments.length} behaviors mapped
-              </span>
-            </div>
-            {requirementSections.map((section, si) => (
-              <div key={si} className="mb-6 last:mb-0">
-                <h4 className="text-[11px] font-semibold mb-2.5 uppercase tracking-wider" style={{ color: TO.textMuted }}>{section.title}</h4>
-                <div className="space-y-2 relative">
-                  {section.segments.map(segId => {
-                    const seg = citableSegments.find(s => s.id === segId);
-                    if (!seg) return null;
-                    const hl = highlightedSegments.includes(segId);
-                    const c = CITATION_COLORS[seg.type];
-                    
-                    return (
-                      <div key={segId} id={`seg-${segId}`}
-                        onMouseEnter={() => onSegmentHover(segId)} onMouseLeave={onSegmentLeave}
-                        className={`p-3 rounded-lg border-l-[3px] transition-all duration-200 text-xs leading-relaxed relative ${hl ? 'transform scale-[1.01] bg-white ring-1 shadow-md z-10' : 'bg-gray-50 hover:bg-gray-100 border-transparent'}`}
-                        style={{ borderLeftColor: hl ? c.border : 'transparent', ringColor: hl ? c.border : 'transparent', color: TO.textSecondary }}>
-                        <div className="flex items-start gap-3">
-                          <span className="flex-shrink-0 mt-0.5 shadow-sm rounded-md bg-white">
-                            <CitationBadge segmentId={segId} type={seg.type} isActive={hl} small />
-                          </span>
-                          <span className={hl ? 'text-slate-900 font-medium' : 'text-slate-600'}>{seg.text}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+      <div className="flex-1 overflow-y-auto p-6" ref={scrollContainerRef}>
+        <div className="space-y-1">
+          {paragraphs.map((para) => {
+            const isHighlighted = highlightedParagraphs.includes(para.index);
+            return (
+              <div
+                key={para.index}
+                ref={el => { paraRefs.current[para.index] = el; }}
+                className="transition-all duration-400 ease-out relative"
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: isHighlighted ? '#F5F3FF' : 'transparent',
+                  borderLeft: isHighlighted ? '2px solid #8B5CF6' : '2px solid transparent',
+                  borderRadius: '0 6px 6px 0',
+                }}
+              >
+                <pre
+                  className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed transition-colors duration-400"
+                  style={{ color: isHighlighted ? '#374151' : '#64748B' }}
+                >
+                  {para.text}
+                </pre>
               </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'map' && (
-          <div className="absolute inset-0 p-2">
-            <TraceMapCanvas />
-          </div>
-        )}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
