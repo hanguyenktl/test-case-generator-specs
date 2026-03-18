@@ -8,6 +8,18 @@ export const mockRequirement = {
   sprint: 23,
 };
 
+// Low-quality requirement for demo — triggers score gate
+export const mockLowQualityRequirement = {
+  id: 'TO-9305',
+  title: 'Add login feature',
+  tester: 'Unassigned',
+  testCases: 0,
+  issueType: 'Story',
+  sprint: 24,
+};
+
+export const mockLowQualityText = `Add a login feature to the application. Users should be able to log in.`;
+
 export const mockRequirementText = `As a QA Engineer investigating a test failure, I want to view the test script code directly from the test result details, so that I can quickly understand what the test does and identify where it might be failing without leaving TestOps.
 
 DETAILS — ACCESS & ENTRY POINTS

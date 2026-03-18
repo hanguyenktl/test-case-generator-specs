@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { ChevronDown, ChevronRight, Bell, Sparkles, Wand2, Loader2, FolderOpen, Check, TestTube2, Eye } from 'lucide-react';
+import { ChevronDown, ChevronRight, Bell, Sparkles, Wand2, Loader2, FolderOpen, Check, TestTube2, Eye, AlertTriangle, ArrowLeftRight } from 'lucide-react';
 import { TO } from './utils/theme';
-import { mockRequirement, mockCoreTests, mockAdditionalTests, existingLinkedTests, mockClarifications } from './data/mockData';
+import { mockRequirement, mockLowQualityRequirement, mockRequirementText, mockLowQualityText, mockCoreTests, mockAdditionalTests, existingLinkedTests, mockClarifications } from './data/mockData';
 import { SidebarNav } from './components/Shell/SidebarNav';
 import { RequirementPanel } from './features/Requirement/RequirementPanel';
 import { AIGeneratorPanel } from './features/Assessment/AIGeneratorPanel';
+import { GenerationConfig } from './features/Assessment/GenerationConfig';
 import { ReviewList } from './features/Review/ReviewList';
 
 const TEST_STATUS = { PENDING: 'pending', ACCEPTED: 'accepted', REJECTED: 'rejected', MODIFIED: 'modified', REGENERATING: 'regenerating' };
@@ -25,6 +26,8 @@ export default function App() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [rightTab, setRightTab] = useState('linked');
   const [acceptedTests, setAcceptedTests] = useState([]);
+  const [requirementScore, setRequirementScore] = useState(0);
+  const [useDemo, setUseDemo] = useState(false); // toggle low-quality requirement
 
   // Optional context
   const [docs, setDocs] = useState([]);
@@ -36,6 +39,17 @@ export default function App() {
     const timer = setTimeout(() => setAssessmentStatus('done'), 30000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Active requirement data
+  const activeReq = useDemo ? mockLowQualityRequirement : mockRequirement;
+  const activeText = useDemo ? mockLowQualityText : mockRequirementText;
+
+  // Score gate logic — context can relax a block to a warning
+  const hasContext = additionalContext.length > 50 || docs.length > 0;
+  const rawBlocked = requirementScore < 30;
+  const isBlocked = rawBlocked && !hasContext; // context relaxes block → warning
+  const isWarning = (requirementScore >= 30 && requirementScore < 50) || (rawBlocked && hasContext);
+  const canGenerate = !gen && !hasGen && !isBlocked;
 
   // Resizable left panel
   const [leftWidth, setLeftWidth] = useState(500);
@@ -148,16 +162,24 @@ export default function App() {
         {/* Breadcrumb */}
         <div className="px-5 py-1.5 bg-white border-b flex items-center text-xs" style={{ borderColor: TO.cardBd, color: TO.textSecondary }}>
           Plans<ChevronRight size={11} className="mx-1" />
-          <span className="font-medium" style={{ color: TO.textBody }}>{mockRequirement.id}</span>
+          <span className="font-medium" style={{ color: TO.textBody }}>{activeReq.id}</span>
+          <button
+            onClick={() => { setUseDemo(!useDemo); setHasGen(false); setTcs([]); setSts({}); setAcceptedTests([]); }}
+            className="ml-auto flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-md border hover:bg-slate-50 transition-colors"
+            style={{ borderColor: '#E5E7EB', color: TO.textSecondary }}
+          >
+            <ArrowLeftRight size={9} />
+            {useDemo ? 'Switch to detailed requirement' : 'Demo: low-quality requirement'}
+          </button>
         </div>
 
         {/* Page header */}
         <div className="bg-white border-b px-5 py-3" style={{ borderColor: TO.cardBd }}>
-          <h1 className="text-base font-semibold" style={{ color: TO.textPrimary }}>{mockRequirement.title}</h1>
+          <h1 className="text-base font-semibold" style={{ color: TO.textPrimary }}>{activeReq.title}</h1>
           <div className="flex items-center gap-3 mt-1 text-xs" style={{ color: TO.textSecondary }}>
-            <span>Tester: {mockRequirement.tester}</span><span>•</span>
+            <span>Tester: {activeReq.tester}</span><span>•</span>
             <span>{existingLinkedTests.length + acceptedTests.length} Tests</span><span>•</span>
-            <span className="px-2 py-0.5 rounded font-medium" style={{ backgroundColor: '#EFF6FF', color: TO.link }}>{mockRequirement.issueType}</span>
+            <span className="px-2 py-0.5 rounded font-medium" style={{ backgroundColor: '#EFF6FF', color: TO.link }}>{activeReq.issueType}</span>
           </div>
         </div>
 
@@ -169,43 +191,79 @@ export default function App() {
               {/* Optional readiness hint + context */}
               <div className="px-3 py-2 flex-shrink-0 border-b border-gray-100">
                 <AIGeneratorPanel
+                  requirementText={activeText}
                   assessmentStatus={assessmentStatus}
-                  clarifications={clarifs}
+                  clarifications={useDemo ? [] : clarifs}
                   onResolve={(id, ans) => setClarifs(p => p.map(c => c.id === id ? { ...c, resolved: ans !== null, resolvedAnswer: ans } : c))}
+                  onScoreChange={setRequirementScore}
+                />
+              </div>
+
+              {/* Requirement text */}
+              <div className="flex-1 overflow-hidden min-h-0 bg-white">
+                <RequirementPanel requirementText={activeText} highlightedParagraphs={highlightedParagraphs} />
+              </div>
+
+              {/* Sticky Generate Button — AI gradient styling */}
+              <div className="border-t border-gray-200 bg-white flex-shrink-0 shadow-[0_-2px_6px_-2px_rgba(0,0,0,0.05)]">
+                {/* Generation Options — config for the AI */}
+                <GenerationConfig
                   additionalContext={additionalContext}
                   onContextChange={setAdditionalContext}
                   documents={docs}
                   onUpload={(d) => setDocs(p => [...p, d])}
                   onRemoveDoc={(id) => setDocs(p => p.filter(d => d.id !== id))}
                 />
-              </div>
 
-              {/* Requirement text */}
-              <div className="flex-1 overflow-hidden min-h-0 bg-white">
-                <RequirementPanel highlightedParagraphs={highlightedParagraphs} />
-              </div>
+                {/* Score gate warning */}
+                {isBlocked && (
+                  <div className="mx-3 mb-2 px-2.5 py-2 rounded-lg flex items-start gap-2 text-[11px]" style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+                    <AlertTriangle size={12} className="text-red-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold text-red-700">Requirement too vague for AI generation.</span>
+                      <span className="text-red-600"> Add user story structure, acceptance criteria, or scenarios. You can also add context below to unlock generation.</span>
+                    </div>
+                  </div>
+                )}
+                {isWarning && !gen && !hasGen && (
+                  <div className="mx-3 mb-2 px-2.5 py-1.5 rounded-lg flex items-center gap-2 text-[10px]" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                    <AlertTriangle size={10} className="text-amber-400 flex-shrink-0" />
+                    <span className="text-amber-700">
+                      {rawBlocked && hasContext
+                        ? 'Requirement quality is low, but your added context may compensate. Proceed with caution.'
+                        : 'Low requirement quality — generated tests may be incomplete or vague.'}
+                    </span>
+                  </div>
+                )}
 
-              {/* Sticky Generate Button — AI gradient styling */}
-              <div className="p-3 border-t border-gray-200 bg-white flex-shrink-0 shadow-[0_-2px_6px_-2px_rgba(0,0,0,0.05)]">
-                <button
-                  onClick={doGen}
-                  disabled={gen || hasGen}
-                  className="w-full py-3 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2.5 transition-all duration-300 disabled:opacity-40 shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99]"
-                  style={{
-                    background: gen || hasGen
-                      ? '#9CA3AF'
-                      : 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #5B21B6 100%)',
-                    boxShadow: gen || hasGen ? 'none' : '0 4px 14px rgba(124, 58, 237, 0.35)',
-                  }}
-                >
-                  {gen ? (
-                    <><Loader2 size={16} className="animate-spin" />Generating...</>
-                  ) : hasGen ? (
-                    <><Sparkles size={16} />Tests Generated</>
-                  ) : (
-                    <><Wand2 size={16} />Generate Test Cases</>
-                  )}
-                </button>
+                <div className="px-3 pb-3">
+                  <button
+                    onClick={doGen}
+                    disabled={!canGenerate}
+                    className="w-full py-3 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2.5 transition-all duration-300 disabled:opacity-40 shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99]"
+                    style={{
+                      background: !canGenerate
+                        ? (isBlocked ? '#F87171' : '#9CA3AF')
+                        : isWarning
+                          ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                          : 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #5B21B6 100%)',
+                      boxShadow: !canGenerate ? 'none'
+                        : isWarning ? '0 4px 14px rgba(245, 158, 11, 0.35)'
+                        : '0 4px 14px rgba(124, 58, 237, 0.35)',
+                      cursor: isBlocked ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {gen ? (
+                      <><Loader2 size={16} className="animate-spin" />Generating...</>
+                    ) : hasGen ? (
+                      <><Sparkles size={16} />Tests Generated</>
+                    ) : isBlocked ? (
+                      <><AlertTriangle size={16} />Requirement Too Vague</>
+                    ) : (
+                      <><Wand2 size={16} />Generate Test Cases</>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 

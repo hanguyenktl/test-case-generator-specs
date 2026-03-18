@@ -1,15 +1,14 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { FileText } from 'lucide-react';
 import { TO } from '../../utils/theme';
-import { mockRequirementText } from '../../data/mockData';
 
-export const RequirementPanel = ({ highlightedParagraphs = [] }) => {
+export const RequirementPanel = ({ requirementText = '', highlightedParagraphs = [] }) => {
   const paragraphs = useMemo(() => {
-    return mockRequirementText.split('\n\n').map((text, index) => ({
+    return requirementText.split('\n\n').map((text, index) => ({
       index,
       text: text.trim(),
     }));
-  }, []);
+  }, [requirementText]);
 
   const paraRefs = useRef({});
   const scrollContainerRef = useRef(null);
