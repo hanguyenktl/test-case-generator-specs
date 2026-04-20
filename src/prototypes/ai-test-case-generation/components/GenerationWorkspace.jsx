@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, ExternalLink, File, FolderOpen, Link2, Loader2, Pencil, RotateCcw, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp, Upload, X } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Database, ExternalLink, File, FolderOpen, Link2, Loader2, Pencil, RotateCcw, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp, Upload, Users, X, Zap } from 'lucide-react';
 import { T } from '../../../utils/design-system';
 import { ConfBadge, PriBadge, IBtn, Button, RightDrawer } from '../../../components/shared';
 import { ALL_CASES, PIPELINE_STEPS, MOCK_FOLDERS } from '../data/mockData';
@@ -21,7 +21,7 @@ export const DemoToggle = ({ entry, setEntry }) => (
 /* ═══════════════════════════════════════════════════════════════
    PIPELINE BAR (Horizontal, compact)
    ═══════════════════════════════════════════════════════════════ */
-export const PipelineBar = ({ step, done }) => (
+export const PipelineBar = ({ step, done, onCollapse }) => (
   <div className="flex items-center px-5 py-1.5 gap-4 shrink-0" style={{ background: done ? "rgba(22,163,74,0.03)" : T.bg, borderBottom: `1px solid ${T.bd}` }}>
     {PIPELINE_STEPS.map((s, i) => {
       const isDone = done || i < step;
@@ -48,6 +48,13 @@ export const PipelineBar = ({ step, done }) => (
         <CheckCircle2 size={11} style={{ color: T.green }} />
         <span style={{ fontSize: 10, color: T.green, fontWeight: 500 }}>{ALL_CASES.length} test cases in 12s</span>
       </div>
+      {onCollapse && (
+        <button onClick={onCollapse} className="p-1 rounded-md transition-colors ml-1" style={{ color: T.t4 }}
+          onMouseEnter={e => { e.currentTarget.style.color = T.t1; e.currentTarget.style.background = T.muted; }}
+          onMouseLeave={e => { e.currentTarget.style.color = T.t4; e.currentTarget.style.background = "transparent"; }}>
+          <X size={12} />
+        </button>
+      )}
     </>}
   </div>
 );
@@ -107,7 +114,7 @@ export const InputCollapsed = ({ entry, onExpand, onGenerate, generating }) => (
   </div>
 );
 
-export const InputExpanded = ({ entry, onCollapse, onGenerate, text, setText, files, setFiles }) => (
+export const InputExpanded = ({ entry, onCollapse, onGenerate, text, setText, files, setFiles, generating }) => (
   <div className="shrink-0" style={{ background: T.card, borderBottom: `1px solid ${T.bd}` }}>
     <div className="flex items-center justify-between px-5 py-2" style={{ borderBottom: `1px solid ${T.bdLight}` }}>
       <div className="flex items-center gap-2">
@@ -281,6 +288,25 @@ export const DetailPanel = ({ tc, onClose, onAccept, onReject }) => {
             </div>
           </>}
         </div>
+
+        {/* Properties (Metadata) */}
+        <div className="grid grid-cols-2 gap-y-2 mb-3 px-3 py-2.5 rounded-md" style={{ background: T.muted, border: `1px solid ${T.bdLight}` }}>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.t4 }} />
+            <span style={{ fontSize: 10, color: T.t4 }}>Status:</span>
+            <span style={{ fontSize: 10, color: T.t2, fontWeight: 500 }}>Draft</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Users size={10} style={{ color: T.t4 }} />
+            <span style={{ fontSize: 10, color: T.t4 }}>Assignee:</span>
+            <span style={{ fontSize: 10, color: T.t2, fontWeight: 500 }}>Unassigned</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Zap size={10} style={{ color: T.brand }} />
+            <span style={{ fontSize: 10, color: T.t4 }}>Exec Type:</span>
+            <span style={{ fontSize: 10, color: T.t2, fontWeight: 500 }}>Automated</span>
+          </div>
+        </div>
         {/* AI Confidence */}
         <div className="rounded-md p-2.5 mb-3" style={{ background: `${confColor}0.04)`, border: `1px solid ${confColor}0.12)` }}>
           <div className="flex items-center gap-2 mb-1">
@@ -306,7 +332,7 @@ export const DetailPanel = ({ tc, onClose, onAccept, onReject }) => {
             <span style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5 }}>Test Steps ({tc.stepsData?.length})</span>
             <button className="flex items-center gap-1 hover:underline" style={{ fontSize: 10, color: T.brand }}><Pencil size={9} /> Edit</button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {tc.stepsData?.map((s, i) => (
               <div key={i} className="group relative pl-6">
                 {/* Step number */}
@@ -314,20 +340,21 @@ export const DetailPanel = ({ tc, onClose, onAccept, onReject }) => {
                   {i + 1}
                 </div>
                 {/* Action */}
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <div style={{ fontSize: 11, color: T.t1, fontWeight: 500, lineHeight: 1.5 }}>
-                    {s.action}
+                <div style={{ fontSize: 11, color: T.t1, fontWeight: 500, lineHeight: 1.5, marginBottom: 3 }}>
+                  {s.action}
+                </div>
+                {/* Expected Result */}
+                <div className="flex items-start gap-1.5" style={{ paddingLeft: 2 }}>
+                  <span style={{ fontSize: 9, fontWeight: 600, color: T.brand, marginTop: 1, whiteSpace: "nowrap" }}>→</span>
+                  <span style={{ fontSize: 10.5, color: T.t3, lineHeight: 1.45 }}>{s.expected}</span>
+                </div>
+                {/* Test Data */}
+                {s.data && (
+                  <div className="flex items-start gap-1.5 mt-1" style={{ paddingLeft: 2 }}>
+                    <Database size={9} style={{ color: T.purple, marginTop: 2, flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, color: T.purple, fontFamily: "ui-monospace, monospace", lineHeight: 1.4 }}>{s.data}</span>
                   </div>
-                  <button onClick={() => { navigator.clipboard.writeText(s.action + "\n" + s.expected); }}
-                    className="p-1 rounded hover:bg-gray-100 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy Step">
-                    <ClipboardList size={11} />
-                  </button>
-                </div>
-                {/* Expected Result Bubble */}
-                <div className="rounded-md p-2" style={{ background: "rgba(94,106,210,0.03)", border: `1px solid ${T.accentBorder}`, borderLeft: `2px solid ${T.brand}` }}>
-                  <div style={{ fontSize: 9, color: T.brand, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>Expected Result</div>
-                  <div style={{ fontSize: 11, color: T.t2, lineHeight: 1.45 }}>{s.expected}</div>
-                </div>
+                )}
               </div>
             ))}
           </div>

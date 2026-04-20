@@ -12,30 +12,30 @@ export const Toolbar = ({ onUndo, onRedo, canUndo, canRedo, onPaste, onAdd, temp
           <option value="manual">Manual Steps</option>
           <option value="bdd">BDD (Gherkin)</option>
         </select>
-        <div style={{ width: 1, height: 14, background: T.bd, margin: "0 8px" }} />
+        <div style={{ width: 1, height: 14, background: T.bd, margin: "0 6px" }} />
       </>
     )}
     <IBtn onClick={onUndo} disabled={!canUndo} title="Undo"><Undo2 size={14} strokeWidth={1.6} /></IBtn>
     <IBtn onClick={onRedo} disabled={!canRedo} title="Redo"><Redo2 size={14} strokeWidth={1.6} /></IBtn>
-    <div style={{ width: 1, height: 14, background: T.bd, margin: "0 5px" }} />
+    <div style={{ width: 1, height: 14, background: T.bd, margin: "0 6px" }} />
     <IBtn title="Bold"><Bold size={14} strokeWidth={1.6} /></IBtn>
     <IBtn title="Italic"><Italic size={14} strokeWidth={1.6} /></IBtn>
     <IBtn title="Link"><Link2 size={14} strokeWidth={1.6} /></IBtn>
     <IBtn title="List"><List size={14} strokeWidth={1.6} /></IBtn>
-    <div style={{ width: 1, height: 14, background: T.bd, margin: "0 5px" }} />
+    <div style={{ width: 1, height: 14, background: T.bd, margin: "0 6px" }} />
     <IBtn title="Image"><Image size={14} strokeWidth={1.6} /></IBtn>
     <div className="flex-1" />
     <Button variant="ghost" icon={Copy} onClick={onPaste} style={{ fontSize: 11 }}>
       Paste from Excel
     </Button>
-    <div style={{ width: 1, height: 14, background: T.bd, margin: "0 5px" }} />
+    <div style={{ width: 1, height: 14, background: T.bd, margin: "0 6px" }} />
     <Button variant="ghost" icon={Plus} onClick={onAdd} style={{ fontSize: 11, color: T.brand }}>
       Add Step
     </Button>
   </div>
 );
 
-export const Cell = ({ value, onChange, active, onFocus, ph, onKeyDown, onMultiPaste, hasWarning }) => {
+export const Cell = ({ value, onChange, active, onFocus, ph, onKeyDown, onMultiPaste, hasWarning, fieldId }) => {
   const handlePaste = (e) => {
     const text = e.clipboardData.getData("text/plain");
     if ((text.includes("\t") || text.includes("\n")) && onMultiPaste) {
@@ -46,7 +46,6 @@ export const Cell = ({ value, onChange, active, onFocus, ph, onKeyDown, onMultiP
         return;
       }
     }
-    // Default plain text paste handling to avoid rich text
     e.preventDefault();
     document.execCommand("insertText", false, text);
   };
@@ -56,6 +55,7 @@ export const Cell = ({ value, onChange, active, onFocus, ph, onKeyDown, onMultiP
 
   return (
     <div contentEditable suppressContentEditableWarning
+      data-field-id={fieldId}
       className="min-h-[32px] px-2.5 py-1.5 outline-none whitespace-pre-wrap transition-all relative"
       style={{ fontSize: 13, lineHeight: 1.55, color: value ? T.t2 : T.t4, background: bg, borderRadius: 3, boxShadow: shadow }}
       onFocus={onFocus} onBlur={e => onChange(e.target.innerText)}
@@ -182,7 +182,7 @@ export const StepAIMenu = ({ onAction, visible }) => {
   );
 };
 
-export const StepRow = ({ s, idx, ac, onAc, onUp, onDel, onDS, onDO, onDr, drag, issues, highlighted, onHighlightStep, template, onAddRow, onMultiPaste }) => {
+export const StepRow = ({ s, idx, ac, onAc, onUp, onDel, onDS, onDO, onDr, drag, issues, highlighted, onHighlightStep, template, onAddRow, onMultiPaste, isLast }) => {
   const hasIssue = issues.length > 0;
   const isHighlighted = highlighted;
   const fieldWarnings = issues.reduce((acc, iss) => { if (iss.field) acc[iss.field] = true; return acc; }, {});
@@ -191,6 +191,39 @@ export const StepRow = ({ s, idx, ac, onAc, onUp, onDel, onDS, onDO, onDr, drag,
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       onAddRow(idx + 1);
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      const fields = template === 'bdd' ? ['s', 'd'] : ['s', 'e', 'd'];
+      const currentField = e.target.getAttribute('data-field-id').split('-')[1];
+      const fieldIdx = fields.indexOf(currentField);
+      
+      if (!e.shiftKey) {
+        // Tab forward
+        if (fieldIdx < fields.length - 1) {
+          e.preventDefault();
+          const nextFieldId = `${s.id}-${fields[fieldIdx + 1]}`;
+          setTimeout(() => {
+            const el = document.querySelector(`[data-field-id="${nextFieldId}"]`);
+            if (el) el.focus();
+          }, 0);
+        } else if (isLast) {
+          e.preventDefault();
+          onAddRow(idx + 1);
+        }
+        // Otherwise, let default tab handle moving to next row's first cell via DOM order
+      } else {
+        // Shift + Tab backward
+        if (fieldIdx > 0) {
+          e.preventDefault();
+          const prevFieldId = `${s.id}-${fields[fieldIdx - 1]}`;
+          setTimeout(() => {
+            const el = document.querySelector(`[data-field-id="${prevFieldId}"]`);
+            if (el) el.focus();
+          }, 0);
+        }
+      }
     }
   };
 
@@ -233,22 +266,22 @@ export const StepRow = ({ s, idx, ac, onAc, onUp, onDel, onDS, onDO, onDr, drag,
               </select>
             </td>
             <td className="align-top" style={{ width: "49%", borderLeft: `1px solid ${T.bdLight}` }}>
-              <Cell value={s.step} onChange={v => onUp(s.id, "step", v)} active={ac === `${s.id}-s`} onFocus={() => onAc(`${s.id}-s`)} ph="Step definition..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.step} />
+              <Cell value={s.step} onChange={v => onUp(s.id, "step", v)} active={ac === `${s.id}-s`} onFocus={() => onAc(`${s.id}-s`)} ph="Step definition..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.step} fieldId={`${s.id}-s`} />
             </td>
             <td className="align-top" style={{ width: "22%", borderLeft: `1px solid ${T.bdLight}` }}>
-              <Cell value={s.data} onChange={v => onUp(s.id, "data", v)} active={ac === `${s.id}-d`} onFocus={() => onAc(`${s.id}-d`)} ph="Test data..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.data} />
+              <Cell value={s.data} onChange={v => onUp(s.id, "data", v)} active={ac === `${s.id}-d`} onFocus={() => onAc(`${s.id}-d`)} ph="Test data..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.data} fieldId={`${s.id}-d`} />
             </td>
           </>
         ) : (
           <>
             <td className="align-top" style={{ width: "37%" }}>
-              <Cell value={s.step} onChange={v => onUp(s.id, "step", v)} active={ac === `${s.id}-s`} onFocus={() => onAc(`${s.id}-s`)} ph="Describe the test step..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.step} />
+              <Cell value={s.step} onChange={v => onUp(s.id, "step", v)} active={ac === `${s.id}-s`} onFocus={() => onAc(`${s.id}-s`)} ph="Describe the test step..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.step} fieldId={`${s.id}-s`} />
             </td>
             <td className="align-top" style={{ width: "32%", borderLeft: `1px solid ${T.bdLight}` }}>
-              <Cell value={s.exp} onChange={v => onUp(s.id, "exp", v)} active={ac === `${s.id}-e`} onFocus={() => onAc(`${s.id}-e`)} ph="Expected result..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.exp} />
+              <Cell value={s.exp} onChange={v => onUp(s.id, "exp", v)} active={ac === `${s.id}-e`} onFocus={() => onAc(`${s.id}-e`)} ph="Expected result..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.exp} fieldId={`${s.id}-e`} />
             </td>
             <td className="align-top" style={{ width: "22%", borderLeft: `1px solid ${T.bdLight}` }}>
-              <Cell value={s.data} onChange={v => onUp(s.id, "data", v)} active={ac === `${s.id}-d`} onFocus={() => onAc(`${s.id}-d`)} ph="Test data..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.data} />
+              <Cell value={s.data} onChange={v => onUp(s.id, "data", v)} active={ac === `${s.id}-d`} onFocus={() => onAc(`${s.id}-d`)} ph="Test data..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.data} fieldId={`${s.id}-d`} />
             </td>
           </>
         )}

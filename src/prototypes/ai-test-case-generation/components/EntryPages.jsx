@@ -365,14 +365,14 @@ export const TestCaseListPage = ({ onCreateWithAI }) => {
         <TestCaseTable 
           data={TC_LIST_DATA}
           columns={[
-            { label: "ID", width: 100, render: TCTableRenderers.id },
+            { label: "ID", width: 110, render: TCTableRenderers.id },
             { label: "Name", render: TCTableRenderers.nameWithTags },
-            { label: "Type", width: 80, render: TCTableRenderers.typeBadge },
+            { label: "Type", width: 72, render: TCTableRenderers.typeBadge },
             { label: "Status", width: 90, render: TCTableRenderers.statusDot },
-            { label: "Pri", width: 60, render: TCTableRenderers.priority },
-            { label: "Last Run", width: 70, render: TCTableRenderers.lastRun },
-            { label: "Assignee", width: 80, key: "assignee", render: (r) => TCTableRenderers.textSmall(r.assignee) },
-            { label: "Updated", width: 60, key: "updated", render: (r) => TCTableRenderers.textSmall(r.updated) }
+            { label: "Pri", width: 50, render: TCTableRenderers.priority },
+            { label: "Last Run", width: 72, render: TCTableRenderers.lastRun },
+            { label: "Assignee", width: 80, render: (r) => TCTableRenderers.textSmall(r.assignee) },
+            { label: "Updated", width: 64, render: (r) => TCTableRenderers.textSmall(r.updated) }
           ]}
         />
 

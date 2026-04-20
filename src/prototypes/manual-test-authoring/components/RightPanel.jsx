@@ -6,7 +6,7 @@ import { ATTACHMENTS } from '../data/mockData';
 import { Badge, RightDrawer, DrawerSection } from '../../../components/shared';
 
 export const Sel = ({ label, value, opts, onChange, required, icon: Icon }) => (
-  <div className="mb-2.5">
+  <div className="mb-2">
     <label style={{ fontSize: 11, color: T.t4, fontWeight: 500, display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
       {Icon && <Icon size={11} />}
       {label}{required && <span style={{ color: T.red }}> *</span>}

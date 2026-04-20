@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Shield, Sparkles, ChevronDown, ChevronRight, Play, Paperclip, Plus, AlertTriangle, Code2, File, ImageIcon, FileSpreadsheet, X, Bold, Italic, Link2, List } from 'lucide-react';
+import { Shield, Sparkles, ChevronDown, ChevronRight, Play, Paperclip, Plus, AlertTriangle, Code2, File, ImageIcon, FileSpreadsheet, X, Bold, Italic, Link2, List, Pencil, FileText } from 'lucide-react';
 import { T } from '../../utils/design-system';
 import Layout from '../../components/shell/Layout';
 import { Badge, Toast, Button, IBtn } from '../../components/shared';
@@ -14,24 +14,46 @@ import { INIT, AI_STEPS, ATTACHMENTS } from './data/mockData';
 
 const MiniEditor = ({ value, onChange, placeholder, minHeight = 96 }) => {
   const [active, setActive] = useState(false);
-  return (
-    <div className={`rounded-md transition-all flex flex-col ${active ? "ring-2 ring-indigo-500/20 bg-white" : "hover:bg-gray-50 bg-white"}`} 
-      style={{ border: `1px solid ${active ? T.brand : T.bd}`, overflow: "hidden", minHeight }}>
-      {active && (
-        <div className="flex items-center gap-1 border-b px-2 py-1" style={{ background: T.muted, borderColor: T.bd }}>
-          <IBtn title="Bold"><Bold size={11} strokeWidth={2} /></IBtn>
-          <IBtn title="Italic"><Italic size={11} strokeWidth={2} /></IBtn>
-          <IBtn title="Link"><Link2 size={11} strokeWidth={2} /></IBtn>
-          <div style={{ width: 1, height: 12, background: T.bd, margin: "0 4px" }} />
-          <IBtn title="Bullet List"><List size={11} strokeWidth={2} /></IBtn>
+  const [hover, setHover] = useState(false);
+
+  if (!active) {
+    return (
+      <div 
+        onClick={() => setActive(true)}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        className="group relative cursor-text transition-all rounded-md px-2.5 py-2 border border-transparent hover:border-indigo-200 hover:bg-indigo-50/30"
+        style={{ minHeight: "auto" }}
+      >
+        <div style={{ fontSize: 12, lineHeight: 1.55, color: value ? T.t2 : T.t4, whiteSpace: "pre-wrap" }}>
+          {value || placeholder}
         </div>
-      )}
+        {hover && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Pencil size={12} className="text-indigo-400" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`rounded-md transition-all flex flex-col ring-2 ring-indigo-500/20 bg-white shadow-sm`} 
+      style={{ border: `1px solid ${T.brand}`, overflow: "hidden", minHeight }}>
+      <div className="flex items-center gap-1 border-b px-2 py-1" style={{ background: T.muted, borderColor: T.bd }}>
+        <IBtn title="Bold"><Bold size={11} strokeWidth={2} /></IBtn>
+        <IBtn title="Italic"><Italic size={11} strokeWidth={2} /></IBtn>
+        <IBtn title="Link"><Link2 size={11} strokeWidth={2} /></IBtn>
+        <div style={{ width: 1, height: 12, background: T.bd, margin: "0 4px" }} />
+        <IBtn title="Bullet List"><List size={11} strokeWidth={2} /></IBtn>
+      </div>
       <div contentEditable suppressContentEditableWarning
         className="outline-none px-2.5 py-2 whitespace-pre-wrap flex-1 cursor-text"
         style={{ fontSize: 12, lineHeight: 1.55, color: value ? T.t2 : T.t4 }}
         onFocus={() => setActive(true)}
         onBlur={e => { setActive(false); onChange(e.target.innerText); }}
-        dangerouslySetInnerHTML={{ __html: value || (active ? "" : `<span style="color:${T.t4}">${placeholder || ""}</span>`) }}
+        onKeyDown={e => { if (e.key === 'Escape') e.currentTarget.blur(); }}
+        dangerouslySetInnerHTML={{ __html: value || "" }}
       />
     </div>
   );
@@ -203,41 +225,42 @@ export default function TestCaseGeneratorPrototype() {
         <div className="flex-1 flex flex-col bg-white relative min-h-0">
           
           {/* Static Context Header (Outside Scroll Area) */}
-          <div className="border-b transition-all shadow-sm z-20" style={{ background: "#fcfcfd", borderColor: T.bdLight, padding: "16px 20px" }}>
+          <div className="border-b transition-all shadow-sm z-20" style={{ background: "#fcfcfd", borderColor: T.bdLight, padding: "12px 20px" }}>
             
             {preOpen ? (
               <>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPreOpen(false)}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.t2, letterSpacing: 0.2 }}>Summary</div>
+                    <FileText size={14} className="text-indigo-500" />
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.t2, letterSpacing: 0.1 }}>Summary</div>
                   </div>
-                  <button onClick={() => setPreOpen(false)} className="flex items-center gap-1 text-gray-500 hover:text-gray-800 transition-colors" style={{ fontSize: 11, fontWeight: 500 }}>
+                  <button onClick={() => setPreOpen(false)} className="flex items-center gap-1 text-gray-500 hover:text-indigo-600 transition-colors" style={{ fontSize: 11, fontWeight: 500 }}>
                     Collapse <ChevronDown size={14} />
                   </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-1">
-                    <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "block", marginBottom: 4 }}>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "block", marginBottom: 6 }}>
                       Description <span style={{ color: T.red }}>*</span>
                     </label>
-                    <MiniEditor value={desc} onChange={setDesc} placeholder="Enter description..." minHeight={110} />
+                    <MiniEditor value={desc} onChange={setDesc} placeholder="Enter description..." minHeight={80} />
                   </div>
                   <div className="md:col-span-1">
-                    <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "block", marginBottom: 4 }}>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "block", marginBottom: 6 }}>
                       Pre-conditions
                     </label>
-                    <MiniEditor value={pre} onChange={setPre} placeholder="Setup, data, or conditions..." minHeight={110} />
+                    <MiniEditor value={pre} onChange={setPre} placeholder="Setup, data, or conditions..." minHeight={80} />
                   </div>
                   <div className="md:col-span-1">
-                    <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <span>Attachments ({ATTACHMENTS.length})</span>
                       <button className="text-indigo-600 hover:text-indigo-700 transition-colors"><Plus size={12} /></button>
                     </label>
-                    <div className="space-y-1.5 overflow-y-auto" style={{ maxHeight: 76 }}>
+                    <div className="space-y-1.5 overflow-y-auto" style={{ maxHeight: 90 }}>
                       {ATTACHMENTS.map((att, i) => {
                         const Icon = fileIcon(att.type);
                         return (
-                          <div key={i} className="group relative flex items-center gap-2 p-1 rounded border transition-shadow cursor-pointer bg-white" style={{ borderColor: T.bd }}>
+                          <div key={i} className="group relative flex items-center gap-2 p-1.5 rounded border transition-all cursor-pointer bg-white hover:border-indigo-200 hover:shadow-sm" style={{ borderColor: T.bd }}>
                             <div className="flex items-center justify-center shrink-0 rounded" style={{ width: 22, height: 22, background: att.thumb ? "#e8eaf0" : T.muted }}>
                               <Icon size={12} style={{ color: T.t4 }} />
                             </div>
@@ -253,10 +276,10 @@ export default function TestCaseGeneratorPrototype() {
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-between cursor-pointer group hover:bg-gray-50 transition-colors rounded -mx-2 px-2 py-1" onClick={() => setPreOpen(true)}>
+              <div className="flex items-center justify-between cursor-pointer group hover:bg-indigo-50/50 transition-colors rounded -mx-1 px-1 py-1" onClick={() => setPreOpen(true)}>
                 <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
-                  <div className="flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 600, color: T.t2, letterSpacing: 0.2, whiteSpace: "nowrap" }}>
-                    <ChevronRight size={14} style={{ color: T.t4 }} className="group-hover:text-gray-800 transition-colors" />
+                  <div className="flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 600, color: T.t2, letterSpacing: 0.1, whiteSpace: "nowrap" }}>
+                    <ChevronRight size={14} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
                     Summary
                   </div>
                   <div style={{ width: 1, height: 12, background: T.bd }} />
@@ -264,6 +287,7 @@ export default function TestCaseGeneratorPrototype() {
                     {desc || "No description provided..."}
                   </div>
                 </div>
+                <div style={{ fontSize: 11, color: T.t4, fontWeight: 500 }} className="opacity-0 group-hover:opacity-100 transition-opacity">Click to expand</div>
               </div>
             )}
           </div>
@@ -309,7 +333,8 @@ export default function TestCaseGeneratorPrototype() {
                           <StepRow s={s} idx={i} ac={ac} onAc={setAc} onUp={upd} onDel={del} onDS={ds} onDO={dO} onDr={dr}
                             drag={dOver === i} issues={issues} highlighted={isHighlighted}
                             onHighlightStep={(id) => { setHighlightStep(id); setTimeout(() => setHighlightStep(null), 6000); }} 
-                            template={template} onAddRow={insertAt} onMultiPaste={handleMultiPaste} />
+                            template={template} onAddRow={insertAt} onMultiPaste={handleMultiPaste} 
+                            isLast={i === steps.length - 1} />
                         </React.Fragment>
                       );
                     })}

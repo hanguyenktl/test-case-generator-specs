@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, ArrowRight, ArrowUpDown, Check, CheckCircle, ChevronDown, ChevronRight, ExternalLink, File, FileDown, FlaskConical, FolderOpen, Link2, Loader2, Play, RotateCcw, ShieldCheck, Sparkles, Tag, ThumbsDown, ThumbsUp, Users, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, ArrowUpDown, Check, CheckCircle, ChevronDown, ChevronRight, ExternalLink, File, FileDown, FlaskConical, FolderOpen, Link2, Loader2, Pencil, Play, RotateCcw, ShieldCheck, Sparkles, Tag, ThumbsDown, ThumbsUp, Users, X } from 'lucide-react';
 import { T } from '../../utils/design-system';
 import Layout from '../../components/shell/Layout';
-import { Toast, Badge, PriBadge, ConfBadge, IBtn } from '../../components/shared';
+import { Toast, Badge, PriBadge, ConfBadge, IBtn, TestCaseTable, TCTableRenderers } from '../../components/shared';
 
-import { MOCK_FOLDERS, PIPELINE_STEPS, CLARS, FEATURE_GROUPS, ALL_CASES, EXISTING_TCS, GEN_MORE_OPTS } from './data/mockData';
+import { MOCK_FOLDERS, PIPELINE_STEPS, CLARS, FEATURE_GROUPS, ALL_CASES, TC_LIST_DATA, GEN_MORE_OPTS } from './data/mockData';
 import { ReqDetailPage, TestCaseListPage } from './components/EntryPages';
 import { DemoToggle, PipelineBar, InputCollapsed, InputExpanded, ClarCard, DetailPanel } from './components/GenerationWorkspace';
 import { PostSaveView } from './components/PostSaveView';
@@ -37,6 +37,8 @@ export default function AITestCaseGenerationPrototype() {
   const [tab, setTab] = useState("review"); // "review" | "accepted" | "rejected" | "existing"
   const [showGenMore, setShowGenMore] = useState(false);
   const [toast, setToast] = useState({ show: false, msg: "" });
+  const [pipeCollapsed, setPipeCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const flash = m => { setToast({ show: true, msg: m }); setTimeout(() => setToast({ show: false, msg: "" }), 2500); };
   const resolveC = (id, val) => setClars(p => p.map(c => c.id === id ? { ...c, resolved: val } : c));
@@ -202,13 +204,13 @@ export default function AITestCaseGenerationPrototype() {
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Top Area: Input Configuration */}
             {inputExpanded || phase === "workspace-idle" ? (
-              <InputExpanded entry={entry} onCollapse={() => setInputExpanded(false)} onGenerate={handleGenerate} text={text} setText={setText} files={files} setFiles={setFiles} />
+              <InputExpanded entry={entry} onCollapse={() => setInputExpanded(false)} onGenerate={handleGenerate} text={text} setText={setText} files={files} setFiles={setFiles} generating={isGen} />
             ) : (
               <InputCollapsed entry={entry} onExpand={() => setInputExpanded(true)} onGenerate={handleGenerate} generating={isGen} />
             )}
 
             {/* Pipeline progress bar */}
-            {(isGen || isDone) && <PipelineBar step={pipeStep} done={isDone} />}
+            {(isGen || (isDone && !pipeCollapsed)) && <PipelineBar step={pipeStep} done={isDone} onCollapse={() => setPipeCollapsed(true)} />}
 
             {/* Main Workspace Area */}
             {phase === "workspace-idle" ? (
@@ -233,10 +235,17 @@ export default function AITestCaseGenerationPrototype() {
               <div className="flex-1 flex overflow-hidden">
 
                 {/* LEFT: Input Context Panel */}
-                <div className="overflow-y-auto shrink-0 animate-slide-in-left" style={{ width: 260, borderRight: `1px solid ${T.bd}`, background: T.card, transition: "width 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
-                  <div className="px-3 py-2" style={{ borderBottom: `1px solid ${T.bdLight}` }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6 }}>Input Context</span>
+                <div className="overflow-y-auto shrink-0 animate-slide-in-left" style={{ width: sidebarCollapsed ? 40 : 260, borderRight: `1px solid ${T.bd}`, background: T.card, transition: "width 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
+                  <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${T.bdLight}` }}>
+                    {!sidebarCollapsed && <span style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6 }}>Input Context</span>}
+                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-1 rounded-md transition-colors" style={{ color: T.t4 }}
+                      onMouseEnter={e => { e.currentTarget.style.color = T.t1; e.currentTarget.style.background = T.muted; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = T.t4; e.currentTarget.style.background = "transparent"; }}>
+                      {sidebarCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                    </button>
                   </div>
+                  {!sidebarCollapsed && (
+                    <>
                   <div className="px-3 py-2.5">
                     {/* Req text preview */}
                     <div className="rounded-md mb-2 p-2" style={{ background: T.bg, border: `1px solid ${T.bdLight}` }}>
@@ -284,213 +293,240 @@ export default function AITestCaseGenerationPrototype() {
                     )}
                   </div>
                   {/* Ask Kai */}
-                  <div className="px-3 py-2" style={{ borderTop: `1px solid ${T.bdLight}` }}>
-                    <button className="flex items-center gap-1.5 w-full justify-center py-1.5 rounded-md transition-colors"
-                      style={{ fontSize: 10, color: T.brand, border: `1px solid ${T.accentBorder}` }}
-                      onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                      <Sparkles size={10} /> Open in Kai <ExternalLink size={8} />
+                  <div className="px-3 py-2.5" style={{ borderTop: `1px solid ${T.bdLight}`, background: "rgba(94,106,210,0.02)" }}>
+                    <button className="flex items-center gap-2 w-full justify-center py-2 rounded-md transition-all"
+                      style={{ fontSize: 11, fontWeight: 500, color: T.brand, background: T.accentLight, border: `1px solid ${T.accentBorder}` }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(94,106,210,0.12)"; e.currentTarget.style.borderColor = T.brand; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = T.accentLight; e.currentTarget.style.borderColor = T.accentBorder; }}>
+                      <Sparkles size={12} /> Chat with Kai <ExternalLink size={9} />
                     </button>
                   </div>
+                    </>
+                  )}
                 </div>
 
                 {/* MIDDLE: Results List */}
                 <div className="flex-1 flex flex-col overflow-hidden bg-white animate-fade-in-up" style={{ minWidth: 0 }}>
                   {/* List header/tabs */}
-                  <div className="flex items-center justify-between px-4 shrink-0" style={{ background: T.card, borderBottom: `1px solid ${T.bd}` }}>
+                  <div className="flex items-center justify-between px-4 shrink-0" style={{ background: T.card, borderBottom: `1px solid ${T.bdLight}` }}>
                     <div className="flex items-center gap-0">
                       {[
                         { id: "review", label: `Review (${cases.length})` },
                         { id: "accepted", label: `Accepted (${accepted.length})` },
                         { id: "rejected", label: `Rejected (${rejected.length})` },
-                        { id: "existing", label: `Existing TCs (${EXISTING_TCS.length})` }
+                        { id: "existing", label: `Existing TCs (${TC_LIST_DATA.length})` }
                       ].map(t => (
                         <button key={t.id} onClick={() => { setTab(t.id); setSelectedId(null); }}
                           className="px-3 py-3.5 transition-colors relative"
-                          style={{ fontSize: 11, fontWeight: tab === t.id ? 600 : 500, color: tab === t.id ? T.brand : T.t3 }}>
+                          style={{ fontSize: 12, fontWeight: tab === t.id ? 600 : 500, color: tab === t.id ? T.brand : T.t3 }}>
                           {t.label}
                           {tab === t.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full" style={{ background: T.brand }} />}
                         </button>
                       ))}
                     </div>
-                    {isDone && (
-                      <div className="flex items-center gap-3">
-                        <span style={{ fontSize: 11, color: T.t3 }}>{tab === "accepted" ? accepted.length : (tab === "review" ? cases.filter(c => c.selected).length : 0)} selected</span>
-                        <button onClick={handleSave} className={`flex items-center gap-1 px-3 py-1.5 rounded-md transition-all ${(tab === "accepted" && accepted.length > 0) || (tab === "review" && cases.some(c => c.selected)) ? "animate-glow" : ""}`}
-                          style={{ background: (tab === "accepted" && accepted.length > 0) || (tab === "review" && cases.some(c => c.selected)) ? T.brand : T.muted, color: "#fff", fontSize: 11, fontWeight: 500 }}>
-                          Save {tab === "accepted" ? accepted.length : "Selected"} Test Cases
-                        </button>
-                      </div>
-                    )}
                   </div>
-
-                  {/* Table Header (only if tab is review/accepted/rejected and no detail open) */}
-                  {!selectedId && tab !== "existing" && (
-                    <div className="flex items-center px-4 py-1.5 shrink-0" style={{ borderBottom: `1px solid ${T.bd}`, background: T.bg }}>
-                      <div style={{ flex: 1, fontSize: 9, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5 }}>Test Case</div>
-                      <div style={{ width: 80, fontSize: 9, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "center" }}>Confidence</div>
-                      <div style={{ width: 60, fontSize: 9, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "center" }}>Steps</div>
-                      <div style={{ width: 60, fontSize: 9, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "center" }}>Priority</div>
-                      <div style={{ width: 60, fontSize: 9, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "center" }}>Actions</div>
-                    </div>
-                  )}
 
                   {/* Case List */}
                   <div className="flex-1 overflow-y-auto bg-white p-0">
                     {tab === "existing" ? (
-                      <div className="p-4 bg-[T.bg] h-full">
-                        <div className="rounded-lg bg-white overflow-hidden" style={{ border: `1px solid ${T.bdLight}` }}>
-                          {EXISTING_TCS.map((tc, i) => (
-                            <div key={tc.id} className="px-3 py-2.5 flex items-center gap-3" style={{ borderBottom: i < EXISTING_TCS.length - 1 ? `1px solid ${T.bdLight}` : "none" }}>
-                              <span style={{ fontSize: 10, fontFamily: "ui-monospace, monospace", color: T.t3 }}>{tc.id}</span>
-                              <span style={{ fontSize: 11, color: T.t1, flex: 1 }}>{tc.name}</span>
-                              <Badge color={tc.type === "MANUAL" ? T.purple : T.brand} bg={tc.type === "MANUAL" ? "rgba(124,58,237,0.06)" : T.accentLight}>{tc.type === "MANUAL" ? "Manual" : "Auto"}</Badge>
-                            </div>
-                          ))}
-                        </div>
+                      <div className="flex-1 bg-white flex flex-col h-full overflow-hidden">
+                        <TestCaseTable 
+                          data={TC_LIST_DATA}
+                          columns={[
+                            { label: "ID", width: 110, render: TCTableRenderers.id },
+                            { label: "Name", render: TCTableRenderers.nameWithTags },
+                            { label: "Type", width: 72, render: TCTableRenderers.typeBadge },
+                            { label: "Status", width: 90, render: TCTableRenderers.statusDot },
+                            { label: "Pri", width: 50, render: TCTableRenderers.priority },
+                            { label: "Last Run", width: 72, render: TCTableRenderers.lastRun },
+                            { label: "Assignee", width: 80, render: (r) => TCTableRenderers.textSmall(r.assignee) },
+                            { label: "Updated", width: 64, render: (r) => TCTableRenderers.textSmall(r.updated) }
+                          ]}
+                        />
                       </div>
                     ) : (
-                      <div className="bg-[T.bg] min-h-full">
+                      <div style={{ background: T.bg, minHeight: "100%" }}>
                         {(tab === "review" ? cases : (tab === "accepted" ? accepted : (tab === "rejected" ? rejected : []))).length === 0 && (
                           <div className="p-20 text-center flex flex-col items-center">
-                            <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
-                              <FlaskConical size={24} className="text-gray-200" />
-                            </div>
-                            <p style={{ fontSize: 12, color: T.t4 }}>No test cases in this view</p>
+                            {waitingClar ? (
+                              <>
+                                <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4" style={{ background: "rgba(217,119,6,0.06)", border: "1.5px solid rgba(217,119,6,0.15)" }}>
+                                  <AlertTriangle size={22} style={{ color: T.amber }} />
+                                </div>
+                                <p style={{ fontSize: 13, fontWeight: 600, color: T.t1, marginBottom: 4 }}>Kai has questions for you</p>
+                                <p style={{ fontSize: 12, color: T.t3, maxWidth: 300, lineHeight: 1.55 }}>Answer the clarifications in the sidebar to help Kai generate more accurate test cases, or skip to continue.</p>
+                                <button onClick={() => setPipeStep(3)} className="mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors"
+                                  style={{ fontSize: 11, fontWeight: 500, color: T.brand, border: `1px solid ${T.accentBorder}` }}
+                                  onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
+                                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                  <Sparkles size={11} /> Skip & Generate Anyway
+                                </button>
+                              </>
+                            ) : isGen && streamCount === 0 ? (
+                              <>
+                                <Loader2 size={24} className="animate-spin mb-3" style={{ color: T.brand }} />
+                                <p style={{ fontSize: 13, fontWeight: 600, color: T.t1, marginBottom: 4 }}>Kai is analyzing requirements...</p>
+                                <p style={{ fontSize: 12, color: T.t3, maxWidth: 300, lineHeight: 1.55 }}>Please wait while Kai extracts test scenarios and boundaries.</p>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
+                                  <FlaskConical size={24} className="text-gray-200" />
+                                </div>
+                                <p style={{ fontSize: 12, color: T.t4 }}>No test cases in this view</p>
+                              </>
+                            )}
                           </div>
                         )}
-                        {Object.entries(groupByArea(tab === "review" ? cases : (tab === "accepted" ? accepted : (tab === "rejected" ? rejected : [])))).map(([area, areaCases]) => (
-                          <div key={area} className="mb-0">
-                            {/* Feature area group header */}
-                            <div className="flex items-center justify-between px-4 py-2" style={{ background: "rgba(94,106,210,0.04)", borderBottom: `1px solid ${T.bdLight}` }}>
-                              <div className="flex items-center gap-2">
-                                <FolderOpen size={12} style={{ color: T.brand }} strokeWidth={1.5} />
-                                <span style={{ fontSize: 11, fontWeight: 700, color: T.t1, textTransform: "uppercase", letterSpacing: 0.4 }}>{area}</span>
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ color: T.t4, background: T.muted }}>{areaCases.length}</span>
-                              </div>
-                              {!selectedId && tab === "review" && (
+                        {Object.entries(groupByArea(tab === "review" ? cases : (tab === "accepted" ? accepted : (tab === "rejected" ? rejected : [])))).length > 0 && (
+                          <TestCaseTable
+                            onRowClick={row => setSelectedId(row.id)}
+                            selectedId={selectedId}
+                            groups={Object.entries(groupByArea(tab === "review" ? cases : (tab === "accepted" ? accepted : (tab === "rejected" ? rejected : [])))).map(([area, areaCases]) => ({
+                              name: area,
+                              items: areaCases,
+                              rightAction: !selectedId && tab === "review" ? () => (
                                 <button onClick={() => handleAcceptGroup(area)} className="flex items-center gap-1 px-2 py-1 rounded transition-colors text-emerald-600 hover:bg-emerald-50"
                                   style={{ fontSize: 10, fontWeight: 600 }}>
                                   <Check size={12} strokeWidth={2.5} /> Accept group
                                 </button>
-                              )}
-                            </div>
-
-                            <div className="bg-white">
-                              {areaCases.map((tc, i) => {
-                                const sel = tc.selected;
-                                const isAct = selectedId === tc.id;
-                                const confColor = tc.confidence === "high" ? T.green : tc.confidence === "medium" ? T.amber : T.red;
-                                return (
-                                    <div key={tc.id} className="group relative flex transition-all cursor-pointer border-b"
-                                      style={{
-                                        borderColor: T.bdLight,
-                                        background: isAct ? T.accentLight : "transparent",
-                                        borderLeft: `3px solid ${confColor}`
-                                      }}
-                                      onClick={() => setSelectedId(tc.id)}>
-                                      
-                                      {/* Floating quick actions on hover */}
-                                      {!selectedId && tab === "review" && (
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-1.5 p-1 rounded-lg bg-white shadow-lg border z-10"
-                                          style={{ borderColor: T.bdLight }}>
-                                          <button onClick={e => { e.stopPropagation(); handleAccept(tc.id); }} className="p-1.5 rounded hover:bg-emerald-50 text-emerald-600 transition-colors" title="Accept">
-                                            <CheckCircle size={14} />
-                                          </button>
-                                          <button onClick={e => { e.stopPropagation(); handleReject(tc.id); }} className="p-1.5 rounded hover:bg-rose-50 text-rose-600 transition-colors" title="Reject">
-                                            <RotateCcw size={14} className="scale-x-[-1]" />
-                                          </button>
-                                          <div className="w-px h-3 bg-gray-200 mx-0.5" />
-                                          <button onClick={e => { e.stopPropagation(); setSelectedId(tc.id); }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400" title="View Detail">
-                                            <ExternalLink size={14} />
-                                          </button>
-                                        </div>
-                                      )}
-                                    
-                                    {selectedId ? (
-                                      /* Compact row when detail panel open */
-                                      <div className="flex items-center gap-3 px-3 py-2.5 w-full min-w-0">
-                                        <ConfBadge level={tc.confidence} />
-                                        <span className="truncate" style={{ fontSize: 11, color: T.t1, fontWeight: isAct ? 600 : 500 }}>{tc.name}</span>
-                                      </div>
-                                    ) : (
-                                      /* Full table row */
-                                      <>
-                                        {/* Selection / Status indicator */}
-                                        <div className="w-10 flex justify-center items-center py-3 shrink-0" onClick={e => { e.stopPropagation(); toggleSelect(tc.id); }}>
-                                          <div className="w-4 h-4 rounded border flex items-center justify-center transition-all duration-200"
-                                            style={{ borderColor: sel ? T.brand : T.t4, background: sel ? T.brand : "transparent", transform: sel ? "scale(1.1)" : "scale(1)" }}>
-                                            {sel && <Check size={12} style={{ color: "#fff", strokeWidth: 3 }} className="animate-in zoom-in duration-200" />}
-                                          </div>
-                                        </div>
-                                        {/* Name & Metadata */}
-                                        <div className="flex-1 py-3 pr-3 min-w-0">
-                                          <div style={{ fontSize: 12, fontWeight: 600, color: T.t1, marginBottom: 2 }}>{tc.name}</div>
-                                          <div style={{ fontSize: 10, color: T.t4, marginBottom: 4 }}>Chain: {tc.chain}</div>
-                                          <div className="flex flex-wrap items-center gap-2">
-                                            {tc.tags?.map(t => (
-                                              <span key={t} className="px-1.5 py-0.5 rounded border" style={{ fontSize: 9, color: T.t3, background: T.bg, borderColor: T.bdLight }}>{t}</span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                        {/* Confidence */}
-                                        <div className="w-20 flex flex-col items-center justify-center shrink-0 border-l" style={{ borderColor: T.bdLight }}>
-                                          <ConfBadge level={tc.confidence} />
-                                          <div className="flex items-center gap-1 mt-1">
-                                            <ShieldCheck size={9} style={{ color: confColor }} />
-                                            <span style={{ fontSize: 9, color: confColor, fontWeight: 600 }}>{tc.confidence}</span>
-                                          </div>
-                                        </div>
-                                        {/* Steps */}
-                                        <div className="w-[60px] flex items-center justify-center shrink-0 border-l" style={{ borderColor: T.bdLight, fontSize: 11, color: T.t3, fontWeight: 500 }}>
-                                          {tc.steps} steps
-                                        </div>
-                                        {/* Priority */}
-                                        <div className="w-[60px] flex items-center justify-center shrink-0 border-l" style={{ borderColor: T.bdLight }}>
-                                          <PriBadge level={tc.priority} />
-                                        </div>
-                                        {/* Actions */}
-                                        <div className="w-[60px] flex items-center justify-center shrink-0 border-l gap-1" style={{ borderColor: T.bdLight }}>
-                                          {tab === "review" && (
-                                            <>
-                                              <button onClick={e => { e.stopPropagation(); handleAccept(tc.id); }} className="p-1 rounded hover:bg-emerald-50 text-emerald-600 transition-colors" title="Accept">
-                                                <CheckCircle size={14} />
-                                              </button>
-                                              <button onClick={e => { e.stopPropagation(); handleReject(tc.id); }} className="p-1 rounded hover:bg-rose-50 text-rose-600 transition-colors" title="Reject">
-                                                <RotateCcw size={14} className="scale-x-[-1]" />
-                                              </button>
-                                            </>
-                                          )}
-                                          {tab === "accepted" && (
-                                            <button onClick={e => { e.stopPropagation(); handleReject(tc.id); }} className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors" title="Move to Review">
-                                              <RotateCcw size={14} className="scale-x-[-1]" />
-                                            </button>
-                                          )}
-                                          {tab === "rejected" && (
-                                            <button onClick={e => { e.stopPropagation(); handleAccept(tc.id); }} className="p-1 rounded hover:bg-emerald-50 text-emerald-600 transition-colors" title="Restore">
-                                              <RotateCcw size={14} />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </>
-                                    )}
+                              ) : null
+                            }))}
+                            getRowStyle={row => ({ borderLeft: `3px solid ${row.confidence === "high" ? T.green : row.confidence === "medium" ? T.amber : T.red}` })}
+                            columns={selectedId ? [
+                              { width: 56, render: (row) => <ConfBadge level={row.confidence} /> },
+                              { render: (row) => (
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: 12, fontWeight: selectedId === row.id ? 600 : 400, color: T.t1 }}>{row.name}</div>
+                                </div>
+                              )},
+                              { width: 44, render: TCTableRenderers.priority }
+                            ] : [
+                              { 
+                                width: 36,
+                                render: (row) => (
+                                  <div className="w-4 h-4 rounded border flex items-center justify-center transition-all duration-200 cursor-pointer"
+                                    onClick={(e) => { e.stopPropagation(); toggleSelect(row.id); }}
+                                    style={{ borderColor: row.selected ? T.brand : T.t4, background: row.selected ? T.brand : "transparent" }}>
+                                    {row.selected && <Check size={10} style={{ color: "#fff", strokeWidth: 3 }} />}
                                   </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
+                                )
+                              },
+                              { label: "Test Case", render: TCTableRenderers.nameWithTags },
+                              { label: "Confidence", width: 84, render: (row) => <ConfBadge level={row.confidence} /> },
+                              { label: "Steps", width: 64, render: (row) => <span style={{ fontSize: 11, color: T.t3 }}>{row.steps} steps</span> },
+                              { label: "Pri", width: 50, render: TCTableRenderers.priority }
+                            ]}
+                            renderRowActions={!selectedId ? (tc) => (
+                              <>
+                                {tab === "review" && (
+                                  <>
+                                    <button onClick={e => { e.stopPropagation(); handleAccept(tc.id); }} className="p-1 rounded hover:bg-emerald-50 text-emerald-600 transition-colors" title="Accept"><CheckCircle size={14} /></button>
+                                    <button onClick={e => { e.stopPropagation(); handleReject(tc.id); }} className="p-1 rounded hover:bg-rose-50 text-rose-600 transition-colors" title="Reject"><X size={14} /></button>
+                                  </>
+                                )}
+                                {tab === "accepted" && (
+                                  <button onClick={e => { e.stopPropagation(); handleReject(tc.id); }} className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors" title="Move to Review"><RotateCcw size={14} className="scale-x-[-1]" /></button>
+                                )}
+                                {tab === "rejected" && (
+                                  <button onClick={e => { e.stopPropagation(); handleAccept(tc.id); }} className="p-1 rounded hover:bg-emerald-50 text-emerald-600 transition-colors" title="Restore"><RotateCcw size={14} /></button>
+                                )}
+                              </>
+                            ) : undefined}
+                          />
+                        )}
 
-                        {/* Generation loading state */}
-                        {isGen && pipeStep >= 3 && streamCount < ALL_CASES.length && (
-                          <div className="p-4 flex items-center gap-3 bg-white" style={{ borderBottom: `1px solid ${T.bdLight}` }}>
-                            <Sparkles size={13} className="animate-kai-sparkle" style={{ color: T.brand }} />
-                            <span style={{ fontSize: 11, color: T.brand, fontWeight: 500 }}>Kai is generating test cases... ({streamCount}/{ALL_CASES.length})</span>
+                        {/* Coverage gaps */}
+                        {isDone && tab === "review" && cases.length > 0 && (
+                          <div className="flex items-center gap-3 px-4 py-2 mt-4" style={{ background: "rgba(217,119,6,0.04)", borderTop: "1px solid rgba(217,119,6,0.12)", borderBottom: "1px solid rgba(217,119,6,0.12)" }}>
+                            <AlertTriangle size={11} style={{ color: T.amber }} />
+                            <span style={{ fontSize: 11, color: T.t2 }}>
+                              Coverage gaps: <strong>role-based access</strong>, <strong>OAuth/SSO</strong>
+                            </span>
+                            <button className="flex items-center gap-1 ml-auto" style={{ fontSize: 10, color: T.brand, fontWeight: 500 }}>
+                              <Sparkles size={9} /> Generate for gaps
+                            </button>
                           </div>
                         )}
                       </div>
                     )}
                   </div>
+
+                  {/* Generation loading state */}
+                  {isGen && pipeStep >= 3 && streamCount < ALL_CASES.length && (
+                    <div className="p-4 flex items-center gap-3 bg-white shrink-0" style={{ borderTop: `1px solid ${T.bdLight}`, boxShadow: "0 -4px 12px rgba(0,0,0,0.05)" }}>
+                      <Loader2 size={13} className="animate-spin" style={{ color: T.brand }} />
+                      <span style={{ fontSize: 11, color: T.brand, fontWeight: 500 }}>Kai is generating test cases... ({streamCount}/{ALL_CASES.length})</span>
+                    </div>
+                  )}
+
+                  {/* Action Bar */}
+                  {isDone && tab === "review" && cases.length > 0 && (
+                    <div className="flex items-center justify-between px-4 py-2 shrink-0" style={{ background: T.hover, borderTop: `1px solid ${T.bdLight}` }}>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <button onClick={() => setShowGenMore(!showGenMore)}
+                            className="flex items-center gap-1 px-2 py-1.5 rounded-md transition-colors"
+                            style={{ fontSize: 11, fontWeight: 500, color: T.brand, border: `1px solid ${T.accentBorder}` }}
+                            onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
+                            onMouseLeave={e => { if (!showGenMore) e.currentTarget.style.background = "transparent"; }}>
+                            <Sparkles size={10} /> Generate more <ChevronDown size={9} />
+                          </button>
+                          {showGenMore && (
+                            <div className="absolute bottom-full mb-1 left-0 w-52 rounded-md overflow-hidden z-20" style={{ background: T.card, border: `1px solid ${T.bd}`, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                              {GEN_MORE_OPTS.map(o => (
+                                <button key={o} onClick={() => setShowGenMore(false)} className="w-full text-left px-3 py-1.5 transition-colors"
+                                  style={{ fontSize: 11, color: T.t2, borderBottom: `1px solid ${T.bdLight}` }}
+                                  onMouseEnter={e => e.currentTarget.style.background = T.hover}
+                                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                  {o}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button onClick={() => { setInputExpanded(true); }}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-md transition-colors"
+                          style={{ fontSize: 11, color: T.t3, border: `1px solid ${T.bd}` }}
+                          onMouseEnter={e => { e.currentTarget.style.background = T.muted; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                          <Pencil size={10} /> Refine input
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <IBtn title="Helpful"><ThumbsUp size={11} strokeWidth={1.4} /></IBtn>
+                        <IBtn title="Not helpful"><ThumbsDown size={11} strokeWidth={1.4} /></IBtn>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sticky Save Footer */}
+                  {isDone && ((tab === "review" && cases.some(c => c.selected)) || (tab === "accepted" && accepted.length > 0)) && (
+                    <div className="flex items-center justify-between px-4 py-2.5 shrink-0 animate-fade-in-up" style={{ background: T.card, borderTop: `1px solid ${T.bd}`, boxShadow: "0 -2px 8px rgba(0,0,0,0.04)" }}>
+                      <div className="flex items-center gap-3">
+                        <Check size={14} style={{ color: T.green }} />
+                        <span style={{ fontSize: 11, color: T.t2 }}>
+                          {tab === "accepted" ? `${accepted.length} accepted` : `${selCount} selected`} test cases
+                        </span>
+                        <div className="flex items-center gap-1.5 ml-2">
+                          <span style={{ fontSize: 10, color: T.t4 }}>Save to:</span>
+                          <div className="flex items-center gap-1 px-2 py-1 rounded" style={{ border: `1px solid ${T.bd}`, background: T.bg }}>
+                            <FolderOpen size={10} style={{ color: T.t4 }} />
+                            <select style={{ fontSize: 11, color: T.t2, background: "transparent", outline: "none", width: 140 }}>
+                              <option>Authentication Tests</option>
+                              {MOCK_FOLDERS.map(f => <option key={f}>{f}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={handleSave} className="flex items-center gap-1.5 px-4 py-2 rounded-md transition-all animate-glow"
+                        style={{ background: T.brand, color: "#fff", fontSize: 12, fontWeight: 500 }}
+                        onMouseEnter={e => e.currentTarget.style.background = T.accent}
+                        onMouseLeave={e => e.currentTarget.style.background = T.brand}>
+                        <Check size={13} strokeWidth={2.5} /> Save {tab === "accepted" ? accepted.length : selCount} Test Cases
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* RIGHT PANEL (Detail) */}

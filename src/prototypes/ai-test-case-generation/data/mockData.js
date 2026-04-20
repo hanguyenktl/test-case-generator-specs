@@ -20,9 +20,9 @@ export const FEATURE_GROUPS = [
         objective: "Validates that a user with correct email and password can log in successfully and has an active session.",
         preconditions: "User account exists with verified email.",
         stepsData: [
-          { action: "Navigate to the login page", expected: "Login form displays email and password fields" },
-          { action: "Enter valid email 'testuser@example.com'", expected: "Email accepted without validation errors" },
-          { action: "Enter valid password 'SecureP@ss123'", expected: "Password field masks input" },
+          { action: "Navigate to the login page", expected: "Login form displays email and password fields", data: "URL: /auth/login" },
+          { action: "Enter valid email 'testuser@example.com'", expected: "Email accepted without validation errors", data: "user: testuser@example.com" },
+          { action: "Enter valid password 'SecureP@ss123'", expected: "Password field masks input", data: "pass: SecureP@ss123" },
           { action: "Click 'Sign In'", expected: "Loading indicator, form disabled" },
           { action: "Observe redirect", expected: "Dashboard loads with welcome message" },
         ],

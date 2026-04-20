@@ -1,81 +1,175 @@
 import React from 'react';
 import { Badge, PriBadge } from '../index';
+import { FolderOpen } from 'lucide-react';
 import { T } from '../../../utils/design-system';
 
-export const TestCaseTable = ({ data, columns, onRowClick, selectedId, renderRowActions, getRowStyle }) => {
+/**
+ * Unified TestCaseTable
+ * 
+ * Supports two modes:
+ *   - Flat: pass `data` (array of rows)
+ *   - Grouped: pass `groups` (array of { name, items, rightAction? })
+ * 
+ * Uses native <table> with auto layout for natural column sizing.
+ */
+export const TestCaseTable = ({ data, groups, columns, onRowClick, selectedId, renderRowActions, getRowStyle }) => {
+  const totalCols = columns.length + (renderRowActions ? 1 : 0);
+  const hasHeaders = columns.some(c => c.label);
+
+  const Row = ({ row, rowIndex }) => {
+    const isSelected = selectedId === row.id;
+    const customStyle = getRowStyle ? getRowStyle(row) : {};
+    return (
+      <tr 
+        className="group transition-colors cursor-pointer"
+        onClick={() => onRowClick?.(row)}
+        style={{ 
+          background: isSelected ? T.accentLight : "transparent",
+          ...customStyle
+        }}
+        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.hover; }}
+        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isSelected ? T.accentLight : "transparent"; }}
+      >
+        {columns.map((col, i) => (
+          <td 
+            key={col.key || col.label || i} 
+            className="align-middle"
+            style={{ 
+              padding: "10px 12px",
+              paddingLeft: i === 0 ? 16 : 12,
+              width: col.width,
+              whiteSpace: col.noWrap ? "nowrap" : undefined,
+              borderBottom: `1px solid ${T.bdLight}`,
+            }}
+          >
+            {col.render ? col.render(row) : (
+              <span style={{ fontSize: 12, color: T.t2 }}>{row[col.key]}</span>
+            )}
+          </td>
+        ))}
+        {renderRowActions && (
+          <td className="align-middle text-right" style={{ padding: "10px 12px", width: 56, borderBottom: `1px solid ${T.bdLight}` }}>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-0.5">
+              {renderRowActions(row)}
+            </div>
+          </td>
+        )}
+      </tr>
+    );
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto w-full">
-      <table className="w-full" style={{ background: T.card }}>
-        <thead>
-          <tr style={{ borderBottom: `2px solid ${T.bd}`, position: "sticky", top: 0, background: T.card, zIndex: 1 }}>
-            {columns.map((col, i) => (
-              <th 
-                key={col.key || i} 
-                className={`text-left py-2.5 ${i === 0 ? 'pl-4 pr-3' : 'px-3'}`} 
-                style={{ fontSize: 9, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5, width: col.width }}
-              >
-                {col.label}
-              </th>
-            ))}
-            {renderRowActions && <th className="py-2.5 px-3" style={{ width: 40 }}></th>}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, rowIndex) => {
-            const isSelected = selectedId === row.id;
-            const customStyle = getRowStyle ? getRowStyle(row) : {};
-            
-            return (
-              <tr 
-                key={row.id || rowIndex} 
-                className="transition-colors cursor-pointer group"
-                onClick={() => onRowClick?.(row)}
-                style={{ 
-                  borderBottom: `1px solid ${T.bdLight}`, 
-                  background: isSelected ? T.accentLight : "transparent",
-                  ...customStyle
-                }}
-                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.hover; }}
-                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
-              >
-                {columns.map((col, i) => (
-                  <td key={col.key || i} className={`py-2.5 ${i === 0 ? 'pl-4 pr-3' : 'px-3'}`}>
-                    {col.render ? col.render(row) : (
-                      <span style={{ fontSize: 12, color: T.t1 }}>{row[col.key]}</span>
-                    )}
-                  </td>
-                ))}
-                {renderRowActions && (
-                  <td className="py-2.5 px-3 text-right">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      {renderRowActions(row)}
+    <div className="flex-1 overflow-y-auto w-full" style={{ background: T.card }}>
+      <table className="w-full border-collapse" style={{ tableLayout: "auto" }}>
+        {hasHeaders && (
+          <thead className="sticky top-0 z-10" style={{ background: T.bg }}>
+            <tr>
+              {columns.map((col, i) => (
+                <th 
+                  key={col.key || col.label || i} 
+                  className="align-middle text-left font-semibold"
+                  style={{ 
+                    padding: "7px 12px",
+                    paddingLeft: i === 0 ? 16 : 12,
+                    width: col.width,
+                    fontSize: 10, 
+                    fontWeight: 600, 
+                    color: T.t4, 
+                    textTransform: "uppercase", 
+                    letterSpacing: "0.04em",
+                    borderBottom: `1px solid ${T.bd}`,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {col.label}
+                </th>
+              ))}
+              {renderRowActions && (
+                <th className="align-middle" style={{ padding: "7px 12px", width: 56, borderBottom: `1px solid ${T.bd}` }} />
+              )}
+            </tr>
+          </thead>
+        )}
+
+        {groups ? (
+          groups.map((group, gi) => (
+            <tbody key={group.name || gi}>
+              <tr>
+                <td 
+                  colSpan={totalCols} 
+                  style={{ 
+                    padding: "6px 16px", 
+                    background: T.bg,
+                    borderBottom: `1px solid ${T.bdLight}`,
+                    borderTop: gi > 0 ? `1px solid ${T.bd}` : undefined,
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen size={11} style={{ color: T.brand }} strokeWidth={1.5} />
+                      <span style={{ fontSize: 11, fontWeight: 600, color: T.t2 }}>{group.name}</span>
+                      <span style={{ fontSize: 9, fontWeight: 500, color: T.t4, background: T.muted, padding: "1px 6px", borderRadius: 3 }}>
+                        {group.count || group.items?.length || 0}
+                      </span>
                     </div>
-                  </td>
-                )}
+                    {group.rightAction && group.rightAction()}
+                  </div>
+                </td>
               </tr>
-            );
-          })}
-        </tbody>
+              {group.items?.map((row, ri) => (
+                <Row key={row.id || ri} row={row} rowIndex={ri} />
+              ))}
+            </tbody>
+          ))
+        ) : (
+          <tbody>
+            {data?.map((row, ri) => (
+              <Row key={row.id || ri} row={row} rowIndex={ri} />
+            ))}
+          </tbody>
+        )}
       </table>
     </div>
   );
 };
 
-// Preset renderers for common test case columns to reuse across prototypes
+
+/* ═══════════════════════════════════════════════════════
+   Column Renderers — TestOps design system compliant
+   fontSize 11-12 range, muted metadata, clean badges
+   ═══════════════════════════════════════════════════════ */
 export const TCTableRenderers = {
-  id: (row) => <span style={{ fontSize: 11, fontFamily: "ui-monospace, monospace", color: T.brand, fontWeight: 500 }}>{row.id}</span>,
+  // Monospace ID — muted, not the focus
+  id: (row) => (
+    <span style={{ fontSize: 11, fontFamily: "ui-monospace, monospace", color: T.t3, whiteSpace: "nowrap" }}>
+      {row.id}
+    </span>
+  ),
+
+  // Name with optional tags below — this is the primary column
   nameWithTags: (row) => (
-    <div>
-      <div style={{ fontSize: 12, color: T.t1, marginBottom: row.tags?.length ? 2 : 0 }}>{row.name}</div>
-      {row.tags && row.tags.length > 0 && (
-        <div className="flex items-center gap-1">
-          {row.tags.map(tag => (
-            <span key={tag} className="px-1.5 py-px rounded" style={{ fontSize: 8, fontWeight: 500, color: T.t4, background: T.muted, border: `1px solid ${T.bdLight}` }}>{tag}</span>
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 12, fontWeight: 500, color: T.t1, lineHeight: 1.4 }}>{row.name}</div>
+      {(row.chain || (row.tags && row.tags.length > 0)) && (
+        <div className="flex items-center flex-wrap gap-1" style={{ marginTop: 3 }}>
+          {row.chain && (
+            <span style={{ fontSize: 10, color: T.t4 }}>Chain: {row.chain}</span>
+          )}
+          {row.tags?.map(tag => (
+            <span key={tag} style={{ 
+              fontSize: 9, fontWeight: 500, color: T.t4, 
+              background: T.muted, padding: "1px 5px", borderRadius: 3,
+              border: `1px solid ${T.bdLight}` 
+            }}>
+              {tag}
+            </span>
           ))}
         </div>
       )}
     </div>
   ),
+
+  // Type badge
   typeBadge: (row) => (
     <Badge color={row.type === "MANUAL" ? T.purple : T.brand}
       bg={row.type === "MANUAL" ? "rgba(124,58,237,0.06)" : T.accentLight}
@@ -83,18 +177,29 @@ export const TCTableRenderers = {
       {row.type === "MANUAL" ? "Manual" : "Auto"}
     </Badge>
   ),
+
+  // Status with dot
   statusDot: (row) => (
-    <div className="flex items-center gap-1.5">
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: row.status === "Published" ? T.green : T.t4 }} />
+    <div className="flex items-center gap-1.5" style={{ whiteSpace: "nowrap" }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", flexShrink: 0, background: row.status === "Published" ? T.green : T.t4, display: "inline-block" }} />
       <span style={{ fontSize: 11, color: T.t3 }}>{row.status}</span>
     </div>
   ),
+
+  // Priority
   priority: (row) => <PriBadge level={row.priority} />,
-  lastRun: (row) => (
-    <div className="flex items-center gap-1">
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: row.lastRun === "Passed" ? T.green : row.lastRun === "Failed" ? T.red : T.t4 }} />
-      <span style={{ fontSize: 10, color: row.lastRun === "Passed" ? T.green : row.lastRun === "Failed" ? T.red : T.t4 }}>{row.lastRun || '-'}</span>
-    </div>
-  ),
-  textSmall: (val) => <span style={{ fontSize: 10, color: T.t3 }}>{val}</span>
+
+  // Last run result
+  lastRun: (row) => {
+    const color = row.lastRun === "Passed" ? T.green : row.lastRun === "Failed" ? T.red : T.t4;
+    return (
+      <div className="flex items-center gap-1" style={{ whiteSpace: "nowrap" }}>
+        <span style={{ width: 5, height: 5, borderRadius: "50%", flexShrink: 0, background: color, display: "inline-block" }} />
+        <span style={{ fontSize: 10, color }}>{row.lastRun || '—'}</span>
+      </div>
+    );
+  },
+
+  // Generic small text
+  textSmall: (val) => <span style={{ fontSize: 11, color: T.t4, whiteSpace: "nowrap" }}>{val}</span>,
 };
