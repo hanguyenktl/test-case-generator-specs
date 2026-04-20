@@ -6,7 +6,7 @@ import { Link, useLocation } from 'react-router-dom';
 const NAV = [
   { icon: Home, id: "home", path: "/" }, 
   { icon: ClipboardList, id: "plans", path: "/plans" },
-  { icon: FlaskConical, id: "tests", path: "/prototypes/test-case-generator" }, 
+  { icon: FlaskConical, id: "tests", path: "/prototypes/manual-test-authoring" }, 
   { icon: Package, id: "assets", path: "/assets" },
   { icon: Play, id: "executions", path: "/executions" }, 
   { icon: BarChart3, id: "reports", path: "/reports" },
