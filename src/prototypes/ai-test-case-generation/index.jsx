@@ -43,6 +43,12 @@ export default function AITestCaseGenerationPrototype() {
   const flash = m => { setToast({ show: true, msg: m }); setTimeout(() => setToast({ show: false, msg: "" }), 2500); };
   const resolveC = (id, val) => setClars(p => p.map(c => c.id === id ? { ...c, resolved: val } : c));
 
+  const handleExecute = () => {
+    flash(`Executing 7 linked test cases...`);
+    // Simulate execution start
+    setTimeout(() => flash(`Execution started successfully.`), 1000);
+  };
+
   const isJ1 = entry === "j1";
 
   // Simulate generation pipeline
@@ -193,7 +199,7 @@ export default function AITestCaseGenerationPrototype() {
             PHASE 1: ENTRY PAGES
             ================================================================= */}
         {phase === "entry" && (
-          isJ1 ? <ReqDetailPage onGenerate={() => setPhase("workspace-idle")} />
+          isJ1 ? <ReqDetailPage onGenerate={() => setPhase("workspace-idle")} onExecute={handleExecute} />
                : <TestCaseListPage onCreateWithAI={() => setPhase("workspace-idle")} />
         )}
 

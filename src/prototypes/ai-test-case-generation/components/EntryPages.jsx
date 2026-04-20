@@ -1,287 +1,195 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, ClipboardList, Clock, ExternalLink, File, FileText, FolderOpen, Info, Link2, Pencil, Plus, Search, ShieldCheck, Sparkles, Target, Upload, Users, Zap, BookOpen, Globe, Hash } from 'lucide-react';
-import { T } from '../../../utils/design-system';
-import { Badge, PriBadge, Button, ListToolbar, TestCaseTable, TCTableRenderers } from '../../../components/shared';
+import { Badge, PriBadge, Button, ListToolbar, TestCaseTable, TCTableRenderers, IBtn } from '../../../components/shared';
 import { QUALITY_DIMS, LINKED_TCS_FULL, TC_LIST_DATA, TC_FOLDERS } from '../data/mockData';
+import { MiniEditor, ReqQualityPopover } from './SharedComponents';
+import { MoreHorizontal, Play, BookOpen, Link2, ExternalLink, ChevronDown, ShieldCheck, FileText, File, Plus, Search, Hash, Users, Clock, Zap, Globe, Target, Sparkles, FolderOpen, Upload } from 'lucide-react';
+import { T } from '../../../utils/design-system';
 
 /* ═══════════════════════════════════════════════════════════════
    ENTRY PAGE: J1 — REQUIREMENT DETAILS
    ═══════════════════════════════════════════════════════════════ */
-export const ReqDetailPage = ({ onGenerate }) => {
-  const [propsOpen, setPropsOpen] = useState(false);
+export const ReqDetailPage = ({ onGenerate, onExecute }) => {
   const [qualOpen, setQualOpen] = useState(false);
   const overallQuality = 72;
   const qualColor = overallQuality >= 80 ? T.green : overallQuality >= 60 ? T.amber : T.red;
 
+  const qualityData = {
+    overall: 72,
+    color: T.amber,
+    dims: { completeness: 85, clarity: 78, ambiguity: 42, testability: 65 }
+  };
+
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Req header — sticky */}
-      <div className="shrink-0 px-5 py-3" style={{ background: T.card, borderBottom: `1px solid ${T.bd}` }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span style={{ fontSize: 11, fontFamily: "ui-monospace, monospace", color: T.brand, fontWeight: 500 }}>TO-8526</span>
-            <Badge color={T.green} bg="rgba(22,163,74,0.06)" border="rgba(22,163,74,0.15)">Approved</Badge>
-            <Badge color={T.purple} bg="rgba(124,58,237,0.06)" border="rgba(124,58,237,0.15)">Jira</Badge>
-            <span style={{ fontSize: 10, color: T.t4 }}>&middot;</span>
-            <span style={{ fontSize: 10, color: T.t4 }}>Story</span>
-            <span style={{ fontSize: 10, color: T.t4 }}>&middot;</span>
-            <span style={{ fontSize: 10, color: T.t4 }}>Sprint 14</span>
+    <div className="flex-1 flex flex-col overflow-hidden bg-white">
+      {/* Premium Header — PERFECTLY UNIFIED with Authoring */}
+      <div className="shrink-0 px-5 py-3 border-b" style={{ background: T.card, borderColor: T.bd }}>
+        {/* Row 1: Metadata & Badges */}
+        <div className="flex items-center gap-2 mb-2">
+          <Badge color={T.purple} bg="rgba(124,58,237,0.06)" border="rgba(124,58,237,0.15)">JIRA</Badge>
+          <span style={{ fontSize: 11, fontFamily: "ui-monospace, monospace", color: T.t4 }}>TO-8526</span>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border" style={{ borderColor: T.bd, background: "transparent" }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.green }} />
+            <span style={{ fontSize: 11, fontWeight: 500, color: T.t2 }}>Approved</span>
           </div>
-          <button onClick={() => setPropsOpen(!propsOpen)}
-            className="flex items-center gap-1 px-2 py-1 rounded-md transition-colors"
-            style={{ fontSize: 10, color: propsOpen ? T.brand : T.t3, border: `1px solid ${propsOpen ? T.accentBorder : T.bd}`, background: propsOpen ? T.accentLight : "transparent" }}
-            onMouseEnter={e => { if (!propsOpen) e.currentTarget.style.background = T.muted; }}
-            onMouseLeave={e => { if (!propsOpen) e.currentTarget.style.background = "transparent"; }}>
-            <Info size={10} /> Properties {propsOpen ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
-          </button>
-        </div>
-        <h2 style={{ fontSize: 16, fontWeight: 600, color: T.t1, margin: "0 0 6px" }}>User authentication flow</h2>
-        <div className="flex items-center gap-4">
-          {/* Quality badge — clickable to expand breakdown */}
-          <button onClick={() => setQualOpen(!qualOpen)} className="flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-colors"
-            style={{ background: qualOpen ? `${qualColor}08` : "transparent", border: qualOpen ? `1px solid ${qualColor}20` : "1px solid transparent" }}
-            onMouseEnter={e => { if (!qualOpen) e.currentTarget.style.background = T.muted; }}
-            onMouseLeave={e => { if (!qualOpen) e.currentTarget.style.background = qualOpen ? `${qualColor}08` : "transparent"; }}>
-            <span style={{ fontSize: 11, color: T.t4 }}>Req Quality</span>
-            <span className="w-2 h-2 rounded-full" style={{ background: qualColor }} />
-            <span style={{ fontSize: 11, color: qualColor, fontWeight: 600 }}>{overallQuality}%</span>
-            {qualOpen ? <ChevronUp size={9} style={{ color: T.t4 }} /> : <ChevronDown size={9} style={{ color: T.t4 }} />}
-          </button>
-          <div className="flex items-center gap-1.5">
-            <ClipboardList size={11} style={{ color: T.t4 }} strokeWidth={1.4} />
-            <span style={{ fontSize: 11, color: T.t4 }}>Linked TCs:</span>
-            <span style={{ fontSize: 11, color: T.t2, fontWeight: 500 }}>7</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Users size={11} style={{ color: T.t4 }} strokeWidth={1.4} />
-            <span style={{ fontSize: 11, color: T.t4 }}>Assignee:</span>
-            <span style={{ fontSize: 11, color: T.t2 }}>Huy Dao</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Clock size={11} style={{ color: T.t4 }} strokeWidth={1.4} />
-            <span style={{ fontSize: 11, color: T.t4 }}>Updated:</span>
-            <span style={{ fontSize: 11, color: T.t2 }}>Apr 14, 2026</span>
+          <div style={{ width: 1, height: 12, background: T.bd, margin: "0 4px" }} />
+          <div className="flex items-center gap-1.5 text-gray-500" style={{ fontSize: 11, fontWeight: 500 }}>
+            <BookOpen size={12} /> Story &middot; Sprint 14
           </div>
         </div>
 
-        {/* Quality breakdown — expandable */}
-        {qualOpen && (
-          <div className="mt-3 rounded-lg p-3" style={{ background: T.bg, border: `1px solid ${T.bdLight}` }}>
-            <div className="flex items-center gap-2 mb-2.5">
-              <ShieldCheck size={12} style={{ color: qualColor }} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: T.t3, textTransform: "uppercase", letterSpacing: 0.4 }}>Quality Breakdown</span>
-              <span className="ml-auto" style={{ fontSize: 10, color: T.t4 }}>AI-assessed &middot; semantic analysis</span>
+        {/* Row 2: Title & Actions */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <h1 className="flex-1 min-w-0 truncate"
+              style={{ fontSize: 16, fontWeight: 600, color: T.t1, letterSpacing: -0.2 }}>
+              User authentication flow
+            </h1>
+
+            {/* Quality Shield — Styled like Authoring */}
+            <div className="relative shrink-0">
+              <button onClick={() => setQualOpen(!qualOpen)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
+                style={{ border: `1px solid rgba(217,119,6,0.2)`, background: qualOpen ? "rgba(217,119,6,0.06)" : "transparent" }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(217,119,6,0.06)"}
+                onMouseLeave={e => { if (!qualOpen) e.currentTarget.style.background = "transparent"; }}>
+                <ShieldCheck size={12} style={{ color: T.amber }} strokeWidth={1.6} />
+                <span style={{ fontSize: 11, fontWeight: 600, color: T.amber, fontVariantNumeric: "tabular-nums" }}>{overallQuality}</span>
+                <span style={{ fontSize: 11, fontWeight: 500, color: T.t3 }}>Quality</span>
+                <ChevronDown size={10} style={{ color: T.t4 }} />
+              </button>
+              {qualOpen && <ReqQualityPopover quality={qualityData} onClose={() => setQualOpen(false)} />}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {QUALITY_DIMS.map(d => {
-                const dc = d.score >= 80 ? T.green : d.score >= 60 ? T.amber : T.red;
-                return (
-                  <div key={d.label} className="flex items-center gap-2 px-2.5 py-2 rounded-md" style={{ background: T.card, border: `1px solid ${T.bdLight}` }}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span style={{ fontSize: 10, fontWeight: 500, color: T.t2 }}>{d.label}</span>
-                        <span style={{ fontSize: 10, fontWeight: 600, color: dc }}>{d.score}%</span>
-                      </div>
-                      <div className="w-full h-1 rounded-full" style={{ background: T.muted }}>
-                        <div className="h-1 rounded-full transition-all" style={{ width: `${d.score}%`, background: dc }} />
-                      </div>
-                      <div style={{ fontSize: 9, color: T.t4, marginTop: 3, lineHeight: 1.3 }}>{d.tip}</div>
-                    </div>
-                  </div>
-                );
-              })}
+
+            <div style={{ width: 1, height: 16, background: T.bd }} />
+
+            <div className="flex items-center gap-1.5 text-gray-500">
+              <Users size={12} />
+              <span style={{ fontSize: 11, fontWeight: 500 }}>Huy Dao</span>
+            </div>
+            
+            <div className="flex items-center gap-1.5 text-gray-500">
+              <Link2 size={12} />
+              <span style={{ fontSize: 11, fontWeight: 500 }}>7 linked tests</span>
             </div>
           </div>
-        )}
 
-        {/* Properties drawer — expandable */}
-        {propsOpen && (
-          <div className="mt-3 rounded-lg p-3" style={{ background: T.bg, border: `1px solid ${T.bdLight}` }}>
-            <div className="grid grid-cols-4 gap-x-6 gap-y-2">
-              {[
-                { label: "Source", value: "Jira", icon: Globe },
-                { label: "Key", value: "TO-8526", icon: Hash },
-                { label: "Type", value: "Story", icon: BookOpen },
-                { label: "Sprint", value: "Sprint 14", icon: Target },
-                { label: "Assignee", value: "Huy Dao", icon: Users },
-                { label: "Reporter", value: "Anh Le", icon: Users },
-                { label: "Created", value: "Apr 8, 2026", icon: Clock },
-                { label: "Updated", value: "Apr 14, 2026", icon: Clock },
-              ].map(p => (
-                <div key={p.label} className="flex items-center gap-2">
-                  <p.icon size={10} style={{ color: T.t4, flexShrink: 0 }} strokeWidth={1.4} />
-                  <span style={{ fontSize: 10, color: T.t4 }}>{p.label}:</span>
-                  <span style={{ fontSize: 10, color: T.t2, fontWeight: 500 }}>{p.value}</span>
-                </div>
-              ))}
-            </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button icon={Play} onClick={onExecute} style={{ background: T.green, color: "#fff", borderColor: T.green }}>
+              Execute
+            </Button>
+            <Button variant="secondary" icon={Sparkles} onClick={onGenerate} style={{ color: T.purple }}>
+              Generate Tests
+            </Button>
+            <IBtn title="More"><MoreHorizontal size={14} /></IBtn>
           </div>
-        )}
-
-        {/* Action bar */}
-        <div className="flex items-center gap-2 mt-3">
-          <Button variant="primary" icon={Sparkles} onClick={onGenerate}>
-            Generate Tests
-          </Button>
-          <Button variant="secondary" icon={Link2}>
-            Link Test Cases
-          </Button>
-          <Button variant="secondary" icon={ExternalLink}>
-            View in Jira
-          </Button>
-          <div className="flex-1" />
-          <Button variant="secondary">
-            ...
-          </Button>
         </div>
       </div>
 
-      {/* Split body: LEFT description+attachments  |  RIGHT linked TCs */}
-      <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
-        {/* LEFT PANEL — Requirement content */}
-        <div className="flex-1 overflow-y-auto p-4" style={{ background: T.bg }}>
-          {/* Description */}
-          <div className="rounded-lg p-4 mb-3" style={{ background: T.card, border: `1px solid ${T.bd}` }}>
-            <div className="flex items-center justify-between mb-2">
-              <span style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5 }}>Description</span>
-              <button className="flex items-center gap-1" style={{ fontSize: 10, color: T.brand }}>
-                <Pencil size={9} /> Edit
-              </button>
-            </div>
-            <div style={{ fontSize: 12, color: T.t2, lineHeight: 1.75 }}>
-              <p style={{ marginBottom: 10 }}>
-                The system shall support login with email and password. Session tokens expire after 30 minutes of inactivity.
-                Failed login attempts are tracked, and accounts are locked after 5 consecutive failures.
-                Password reset is available via email link. Users should be notified of suspicious login activity.
-              </p>
-              <p style={{ marginBottom: 10 }}>
-                The authentication module must support Single Sign-On (SSO) integration with SAML 2.0 and OAuth 2.0 providers.
-                Multi-factor authentication (MFA) should be available as an optional security layer.
-              </p>
-              <p style={{ marginBottom: 0 }}>
-                <strong>Acceptance criteria:</strong>
-              </p>
-              <div style={{ paddingLeft: 12, marginTop: 4 }}>
-                <div style={{ fontSize: 12, color: T.t2, lineHeight: 1.8 }}>
-                  1. User can log in with valid email/password and is redirected to dashboard<br />
-                  2. Invalid credentials show inline error without page reload<br />
-                  3. Account locks after 5 failed attempts with 15-minute cooldown<br />
-                  4. Password reset link is valid for 24 hours<br />
-                  5. SSO login creates a local session with same timeout rules
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* LEFT — Requirement Details */}
+        <div className="flex-1 overflow-y-auto p-6" style={{ background: T.bg }}>
+          <div className="max-w-4xl mx-auto space-y-6">
+            <section>
+              <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "block", marginBottom: 8 }}>
+                Description
+              </label>
+              <div className="bg-white rounded-lg border shadow-sm p-2" style={{ borderColor: T.bd }}>
+                <MiniEditor readOnly value={`The system shall support login with email and password. Session tokens expire after 30 minutes of inactivity. Failed login attempts are tracked, and accounts are locked after 5 consecutive failures. Password reset is available via email link. Users should be notified of suspicious login activity.
 
-          {/* Attachments */}
-          <div className="rounded-lg p-4 mb-3" style={{ background: T.card, border: `1px solid ${T.bd}` }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Attachments (2)</div>
-            {[
-              { name: "auth-flow-spec.pdf", size: "1.2 MB", icon: FileText, color: "#dc2626" },
-              { name: "login-wireframe.png", size: "340 KB", icon: File, color: T.brand },
-            ].map((f, i) => (
-              <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-md mb-1.5 transition-colors cursor-pointer"
-                style={{ background: T.bg, border: `1px solid ${T.bdLight}` }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = T.brand; e.currentTarget.style.background = T.accentLight; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = T.bdLight; e.currentTarget.style.background = T.bg; }}>
-                <f.icon size={14} style={{ color: f.color }} strokeWidth={1.5} />
-                <div className="flex-1 min-w-0">
-                  <span style={{ fontSize: 12, color: T.t1, fontWeight: 500 }}>{f.name}</span>
-                </div>
-                <span style={{ fontSize: 10, color: T.t4 }}>{f.size}</span>
-                <button style={{ fontSize: 10, color: T.brand, fontWeight: 500 }}>Preview</button>
+The authentication module must support Single Sign-On (SSO) integration with SAML 2.0 and OAuth 2.0 providers. Multi-factor authentication (MFA) should be available as an optional security layer.`} />
               </div>
-            ))}
-          </div>
+            </section>
 
-          {/* Activity / Comments — adds realism */}
-          <div className="rounded-lg p-4" style={{ background: T.card, border: `1px solid ${T.bd}` }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Activity</div>
-            {[
-              { user: "Anh Le", avatar: "A", time: "Apr 14", text: "Updated acceptance criteria for SSO login behavior" },
-              { user: "Huy Dao", avatar: "H", time: "Apr 12", text: "Linked 3 additional test cases from Sprint 13 regression suite" },
-              { user: "System", avatar: "K", time: "Apr 10", text: "Quality score updated: 68% → 72% after description edit", system: true },
-            ].map((a, i) => (
-              <div key={i} className="flex items-start gap-2.5 mb-3">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: a.system ? T.accentLight : T.muted, color: a.system ? T.brand : T.t3, fontSize: 8, fontWeight: 700, marginTop: 1 }}>{a.avatar}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span style={{ fontSize: 11, fontWeight: 500, color: a.system ? T.brand : T.t1 }}>{a.user}</span>
-                    <span style={{ fontSize: 9, color: T.t4 }}>{a.time}</span>
+            <section>
+              <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "block", marginBottom: 8 }}>
+                Acceptance Criteria
+              </label>
+              <div className="bg-white rounded-lg border shadow-sm p-2" style={{ borderColor: T.bd }}>
+                <MiniEditor readOnly value={`1. User can log in with valid email/password and is redirected to dashboard
+2. Invalid credentials show inline error without page reload
+3. Account locks after 5 failed attempts with 15-minute cooldown
+4. Password reset link is valid for 24 hours
+5. SSO login creates a local session with same timeout rules`} />
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6 }}>
+                  Attachments (2)
+                </label>
+                <button className="text-indigo-600 hover:text-indigo-700 transition-colors"><Plus size={14} /></button>
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                {[
+                  { name: "auth-flow-spec.pdf", size: "1.2 MB", icon: FileText, color: "#ef4444", type: "pdf" },
+                  { name: "login-wireframe.png", size: "340 KB", icon: File, color: T.brand, type: "image", thumb: true },
+                ].map((f, i) => (
+                  <div key={i} className="group flex flex-col gap-2 cursor-pointer">
+                    <div className="aspect-[4/3] rounded-lg border flex items-center justify-center transition-all bg-white hover:border-indigo-300 hover:shadow-md relative overflow-hidden" 
+                      style={{ borderColor: T.bd }}>
+                      {f.type === "image" ? (
+                        <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+                          <img src={`https://images.unsplash.com/photo-1557683316-973673baf926?w=200&h=150&fit=crop`} alt="thumb" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                          <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-gray-400 group-hover:text-indigo-500 transition-colors">
+                          <f.icon size={24} style={{ color: f.color }} strokeWidth={1.5} />
+                          <span style={{ fontSize: 9, fontWeight: 600 }}>{f.type.toUpperCase()}</span>
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <IBtn variant="secondary" style={{ background: "white", padding: 4 }}><ExternalLink size={10} /></IBtn>
+                      </div>
+                    </div>
+                    <div className="px-0.5">
+                      <div style={{ fontSize: 11, fontWeight: 500, color: T.t1 }} className="truncate">{f.name}</div>
+                      <div style={{ fontSize: 9, color: T.t4 }}>{f.size}</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: T.t3, lineHeight: 1.4, marginTop: 1 }}>{a.text}</div>
-                </div>
+                ))}
               </div>
-            ))}
+            </section>
           </div>
         </div>
 
-        {/* RIGHT PANEL — Linked Test Cases */}
-        <div className="overflow-y-auto" style={{ flex: "0 0 380px", background: T.card, borderLeft: `1px solid ${T.bd}` }}>
-          <div className="flex items-center justify-between px-4 py-2" style={{ borderBottom: `1px solid ${T.bd}`, background: T.card, position: "sticky", top: 0, zIndex: 2 }}>
+        {/* RIGHT — Linked Test Cases (Overhauled to TCTable) */}
+        <div className="flex flex-col border-l bg-white" style={{ width: 420, borderColor: T.bd }}>
+          <div className="px-4 py-3 border-b flex items-center justify-between bg-gray-50/50">
             <div className="flex items-center gap-2">
-              <span style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5 }}>Linked Test Cases</span>
-              <span className="px-1.5 rounded" style={{ fontSize: 10, fontWeight: 600, color: T.brand, background: T.accentLight }}>{LINKED_TCS_FULL.length}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6 }}>Linked Test Cases</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-bold text-[10px]">{LINKED_TCS_FULL.length}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <button className="flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors"
-                style={{ fontSize: 10, color: T.brand, fontWeight: 500 }}
-                onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                <Plus size={9} /> Link
-              </button>
-            </div>
+            <button className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium text-[11px] transition-colors">
+              <Plus size={14} /> Link Test Case
+            </button>
           </div>
-
-          {/* Coverage summary */}
-          <div className="px-4 py-2" style={{ background: T.bg, borderBottom: `1px solid ${T.bdLight}` }}>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.green }} />
-                <span style={{ fontSize: 10, color: T.t3 }}>4 Published</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.t4 }} />
-                <span style={{ fontSize: 10, color: T.t3 }}>2 Draft</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.red }} />
-                <span style={{ fontSize: 10, color: T.t3 }}>1 Failed</span>
-              </div>
-            </div>
+          
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <TestCaseTable 
+              data={LINKED_TCS_FULL}
+              columns={[
+                { label: "TC", width: 44, render: (r) => <span style={{ fontSize: 10, fontFamily: "monospace", color: T.brand }}>{r.id.split('-')[1]}</span> },
+                { label: "Name", render: (r) => (
+                  <div className="py-1">
+                    <div style={{ fontSize: 12, fontWeight: 500, color: T.t1, lineHeight: 1.3 }}>{r.name}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <PriBadge level={r.priority} />
+                      <span style={{ fontSize: 9, color: T.t4 }}>{r.updated}</span>
+                    </div>
+                  </div>
+                )},
+                { label: "Status", width: 90, render: (r) => (
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${r.lastRun === "Passed" ? "bg-emerald-500" : r.lastRun === "Failed" ? "bg-rose-500" : "bg-gray-400"}`} />
+                    <span style={{ fontSize: 11, color: r.lastRun === "Passed" ? T.green : r.lastRun === "Failed" ? T.red : T.t4 }}>{r.lastRun || "Never"}</span>
+                  </div>
+                )}
+              ]}
+            />
           </div>
-
-          {/* TC rows */}
-          {LINKED_TCS_FULL.map(tc => (
-            <div key={tc.id} className="px-4 py-2.5 transition-colors cursor-pointer"
-              style={{ borderBottom: `1px solid ${T.bdLight}` }}
-              onMouseEnter={e => e.currentTarget.style.background = T.hover}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-              <div className="flex items-center gap-2 mb-1">
-                <span style={{ fontSize: 10, fontFamily: "ui-monospace, monospace", color: T.brand, fontWeight: 500 }}>{tc.id}</span>
-                <Badge color={tc.type === "MANUAL" ? T.purple : T.brand}
-                  bg={tc.type === "MANUAL" ? "rgba(124,58,237,0.06)" : T.accentLight}
-                  border={tc.type === "MANUAL" ? "rgba(124,58,237,0.12)" : T.accentBorder}>
-                  {tc.type === "MANUAL" ? "Manual" : "Auto"}
-                </Badge>
-                <div className="flex-1" />
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: tc.lastRun === "Passed" ? T.green : tc.lastRun === "Failed" ? T.red : T.t4 }} />
-                  <span style={{ fontSize: 9, color: tc.lastRun === "Passed" ? T.green : tc.lastRun === "Failed" ? T.red : T.t4 }}>{tc.lastRun}</span>
-                </div>
-              </div>
-              <div style={{ fontSize: 12, color: T.t1, fontWeight: 400, lineHeight: 1.4 }}>{tc.name}</div>
-              <div className="flex items-center gap-3 mt-1">
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: tc.status === "Published" ? T.green : T.t4 }} />
-                  <span style={{ fontSize: 10, color: T.t4 }}>{tc.status}</span>
-                </div>
-                <PriBadge level={tc.priority} />
-                <span style={{ fontSize: 9, color: T.t4 }}>Updated {tc.updated}</span>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
