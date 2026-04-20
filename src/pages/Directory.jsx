@@ -7,11 +7,11 @@ const prototypes = [
   {
     id: 'manual-test-authoring',
     name: 'Manual Test Authoring',
-    description: 'Legacy manual test authoring prototype with AI quality scoring and AI Runner confidence.',
+    description: 'High-fidelity manual test authoring experience with premium AI quality scoring and AI Runner verification.',
     icon: LayoutIcon,
-    status: 'Legacy',
+    status: 'Active',
     path: '/prototypes/manual-test-authoring',
-    color: T.t3
+    color: T.brand
   },
   {
     id: 'ai-test-case-generation',
