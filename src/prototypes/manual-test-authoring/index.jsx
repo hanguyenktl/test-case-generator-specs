@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Shield, Sparkles, ChevronDown, Play, Paperclip, Plus, AlertTriangle, Code2, File, ImageIcon, FileSpreadsheet, X } from 'lucide-react';
+import { Shield, Sparkles, ChevronDown, ChevronRight, Play, Paperclip, Plus, AlertTriangle, Code2, File, ImageIcon, FileSpreadsheet, X, Bold, Italic, Link2, List } from 'lucide-react';
 import { T } from '../../utils/design-system';
 import Layout from '../../components/shell/Layout';
-import { Badge, Toast, Button } from '../../components/shared';
+import { Badge, Toast, Button, IBtn } from '../../components/shared';
 import { RPanel } from './components/RightPanel';
 import { PreCond } from './components/PreCond';
 import { PasteModal } from './components/PasteModal';
@@ -12,14 +12,40 @@ import { Toolbar, StepRow, InsertZone, InsertLine } from './components/StepTable
 import { computeQuality, computeRunnerConfidence } from './utils/QualityEngine';
 import { INIT, AI_STEPS, ATTACHMENTS } from './data/mockData';
 
+const MiniEditor = ({ value, onChange, placeholder, minHeight = 96 }) => {
+  const [active, setActive] = useState(false);
+  return (
+    <div className={`rounded-md transition-all flex flex-col ${active ? "ring-2 ring-indigo-500/20 bg-white" : "hover:bg-gray-50 bg-white"}`} 
+      style={{ border: `1px solid ${active ? T.brand : T.bd}`, overflow: "hidden", minHeight }}>
+      {active && (
+        <div className="flex items-center gap-1 border-b px-2 py-1" style={{ background: T.muted, borderColor: T.bd }}>
+          <IBtn title="Bold"><Bold size={11} strokeWidth={2} /></IBtn>
+          <IBtn title="Italic"><Italic size={11} strokeWidth={2} /></IBtn>
+          <IBtn title="Link"><Link2 size={11} strokeWidth={2} /></IBtn>
+          <div style={{ width: 1, height: 12, background: T.bd, margin: "0 4px" }} />
+          <IBtn title="Bullet List"><List size={11} strokeWidth={2} /></IBtn>
+        </div>
+      )}
+      <div contentEditable suppressContentEditableWarning
+        className="outline-none px-2.5 py-2 whitespace-pre-wrap flex-1 cursor-text"
+        style={{ fontSize: 12, lineHeight: 1.55, color: value ? T.t2 : T.t4 }}
+        onFocus={() => setActive(true)}
+        onBlur={e => { setActive(false); onChange(e.target.innerText); }}
+        dangerouslySetInnerHTML={{ __html: value || (active ? "" : `<span style="color:${T.t4}">${placeholder || ""}</span>`) }}
+      />
+    </div>
+  );
+};
+
 export default function TestCaseGeneratorPrototype() {
   const [steps, setSteps] = useState(INIT);
+  const [template, setTemplate] = useState("manual");
   const [ac, setAc] = useState(null);
   const [title, setTitle] = useState("Verify user login functionality");
   const [editingTitle, setEditingTitle] = useState(false);
   const [desc, setDesc] = useState("Verify the complete user login flow including authentication, session creation, and dashboard redirect.");
   const [pre, setPre] = useState("1. Test user account exists (qa.tester@katalon.io)\n2. Application deployed and accessible\n3. No active sessions for the test user");
-  const [preOpen, setPreOpen] = useState(false);
+  const [preOpen, setPreOpen] = useState(true);
   const [meta, setMeta] = useState({ status: "Published", priority: "High", assignee: "Huy Dao" });
   const [showAI, setShowAI] = useState(false);
   const [aiDone, setAiDone] = useState([]);
@@ -56,7 +82,19 @@ export default function TestCaseGeneratorPrototype() {
   const del = id => { snap(); setSteps(p => p.filter(s => s.id !== id)); flash("Removed"); };
   const add = () => { snap(); const n = Math.max(0, ...steps.map(s => s.id)) + 1; setSteps(p => [...p, { id: n, step: "", exp: "", data: "" }]); setTimeout(() => setAc(`${n}-s`), 50); };
   const insertAt = (idx) => { snap(); const n = Math.max(0, ...steps.map(s => s.id)) + 1; setSteps(p => { const cp = [...p]; cp.splice(idx, 0, { id: n, step: "", exp: "", data: "" }); return cp; }); setHoverInsert(null); setTimeout(() => setAc(`${n}-s`), 50); flash("Step inserted"); };
-
+  const handleMultiPaste = (idx, rows) => {
+    snap();
+    const b = Math.max(0, ...steps.map(s => s.id)) + 1;
+    const newSteps = rows.map((r, i) => {
+      if (template === 'bdd') {
+        const hasKeyword = ["Given", "When", "Then", "And", "But"].includes(r[0]);
+        return { id: b + i, keyword: hasKeyword ? r[0] : "And", step: hasKeyword ? r[1] : r[0], data: hasKeyword ? r[2] : r[1] };
+      }
+      return { id: b + i, step: r[0], exp: r[1] || "", data: r[2] || "" };
+    });
+    setSteps(p => { const cp = [...p]; cp.splice(idx + 1, 0, ...newSteps); return cp; });
+    flash(`${rows.length} pasted`);
+  };
   const genAI = () => { setAiLoad(true); setAiDone([]); setTimeout(() => { setAiLoad(false); setShowAI(true); }, 1500); };
   const okAI = id => { const s = AI_STEPS.find(x => x.id === id); if (!s) return; snap(); const n = Math.max(0, ...steps.map(x => x.id)) + 1; setSteps(p => [...p, { ...s, id: n, isAI: true }]); setAiDone(p => [...p, id]); flash("Added"); };
   const okAllAI = () => { snap(); const ns = AI_STEPS.filter(s => !aiDone.includes(s.id)).map((s, i) => ({ ...s, id: Math.max(0, ...steps.map(x => x.id)) + i + 1, isAI: true })); setSteps(p => [...p, ...ns]); setAiDone(AI_STEPS.map(s => s.id)); flash(`${ns.length} added`); };
@@ -161,75 +199,77 @@ export default function TestCaseGeneratorPrototype() {
 
       {/* ── Body ── */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="mb-4">
-            <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "block", marginBottom: 4 }}>
-              Description <span style={{ color: T.red }}>*</span>
-            </label>
-            <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
-              className="w-full outline-none resize-y transition-shadow"
-              style={{ fontSize: 12, lineHeight: 1.55, color: T.t2, background: T.card, border: `1px solid ${desc.trim() ? T.bd : T.red}`, borderRadius: 5, padding: "8px 10px" }}
-              onFocus={e => e.currentTarget.style.boxShadow = `0 0 0 1.5px ${T.brand}`} onBlur={e => e.currentTarget.style.boxShadow = "none"} />
-          </div>
-
-          <PreCond val={pre} set={setPre} open={preOpen} toggle={() => setPreOpen(!preOpen)} />
-
-          <div className="rounded-lg overflow-hidden mb-4" style={{ background: T.card, border: `1px solid ${T.bd}` }}>
-            <div className="flex items-center justify-between px-3.5 py-2 cursor-pointer"
-              onMouseEnter={e => e.currentTarget.style.background = T.hover}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-              <div className="flex items-center gap-2">
-                <Paperclip size={13} style={{ color: T.t3 }} strokeWidth={1.5} />
-                <span style={{ fontSize: 12, fontWeight: 500, color: T.t2 }}>Attachments</span>
-                <Badge color={T.t3} bg={T.muted}>{ATTACHMENTS.length}</Badge>
-              </div>
-              <button className="flex items-center gap-1 px-2 py-0.5 rounded transition-colors"
-                style={{ fontSize: 11, fontWeight: 500, color: T.brand }}
-                onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                <Plus size={11} /> Add
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2.5 px-3.5 pb-3">
-              {ATTACHMENTS.map((att, i) => {
-                const Icon = fileIcon(att.type);
-                return (
-                  <div key={i} className="group relative rounded-lg overflow-hidden transition-shadow cursor-pointer"
-                    style={{ width: 120, border: `1px solid ${T.bd}` }}
-                    onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"}
-                    onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
-                    <div className="flex items-center justify-center" style={{ height: 72, background: att.thumb ? "#e8eaf0" : T.muted }}>
-                      {att.thumb ? (
-                        <div style={{ width: "100%", height: "100%", background: `linear-gradient(135deg, ${T.muted} 25%, #dde0e8 50%, ${T.muted} 75%)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <ImageIcon size={24} style={{ color: T.t4 }} strokeWidth={1.2} />
-                        </div>
-                      ) : (
-                        <Icon size={24} style={{ color: T.t4 }} strokeWidth={1.2} />
-                      )}
-                    </div>
-                    <div className="px-2 py-1.5">
-                      <div style={{ fontSize: 10, fontWeight: 500, color: T.t2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.name}</div>
-                      <div style={{ fontSize: 9, color: T.t4 }}>{att.size} · {att.date}</div>
-                    </div>
-                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="w-5 h-5 rounded flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}>
-                        <X size={10} />
-                      </button>
+        {/* CENTER PANEL: Step Editor */}
+        <div className="flex-1 flex flex-col bg-white relative min-h-0">
+          
+          {/* Static Context Header (Outside Scroll Area) */}
+          <div className="border-b transition-all shadow-sm z-20" style={{ background: "#fcfcfd", borderColor: T.bdLight, padding: "16px 20px" }}>
+            
+            {preOpen ? (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 cursor-pointer" onClick={() => setPreOpen(false)}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: T.t2, letterSpacing: 0.2 }}>Summary</div>
+                  </div>
+                  <button onClick={() => setPreOpen(false)} className="flex items-center gap-1 text-gray-500 hover:text-gray-800 transition-colors" style={{ fontSize: 11, fontWeight: 500 }}>
+                    Collapse <ChevronDown size={14} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="md:col-span-1">
+                    <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "block", marginBottom: 4 }}>
+                      Description <span style={{ color: T.red }}>*</span>
+                    </label>
+                    <MiniEditor value={desc} onChange={setDesc} placeholder="Enter description..." minHeight={110} />
+                  </div>
+                  <div className="md:col-span-1">
+                    <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "block", marginBottom: 4 }}>
+                      Pre-conditions
+                    </label>
+                    <MiniEditor value={pre} onChange={setPre} placeholder="Setup, data, or conditions..." minHeight={110} />
+                  </div>
+                  <div className="md:col-span-1">
+                    <label style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6, display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span>Attachments ({ATTACHMENTS.length})</span>
+                      <button className="text-indigo-600 hover:text-indigo-700 transition-colors"><Plus size={12} /></button>
+                    </label>
+                    <div className="space-y-1.5 overflow-y-auto" style={{ maxHeight: 76 }}>
+                      {ATTACHMENTS.map((att, i) => {
+                        const Icon = fileIcon(att.type);
+                        return (
+                          <div key={i} className="group relative flex items-center gap-2 p-1 rounded border transition-shadow cursor-pointer bg-white" style={{ borderColor: T.bd }}>
+                            <div className="flex items-center justify-center shrink-0 rounded" style={{ width: 22, height: 22, background: att.thumb ? "#e8eaf0" : T.muted }}>
+                              <Icon size={12} style={{ color: T.t4 }} />
+                            </div>
+                            <div className="flex-1 min-w-0 flex justify-between items-center pr-1">
+                              <div style={{ fontSize: 11, fontWeight: 500, color: T.t2 }} className="truncate">{att.name}</div>
+                              <div style={{ fontSize: 9, color: T.t4 }}>{att.size}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                );
-              })}
-              <div className="rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors"
-                style={{ width: 120, height: 104, border: `2px dashed ${T.bd}` }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = T.brand; e.currentTarget.style.background = T.accentLight; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = T.bd; e.currentTarget.style.background = "transparent"; }}>
-                <Plus size={16} style={{ color: T.t4, marginBottom: 2 }} />
-                <span style={{ fontSize: 10, color: T.t4 }}>Drop files</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-between cursor-pointer group hover:bg-gray-50 transition-colors rounded -mx-2 px-2 py-1" onClick={() => setPreOpen(true)}>
+                <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
+                  <div className="flex items-center gap-1.5" style={{ fontSize: 13, fontWeight: 600, color: T.t2, letterSpacing: 0.2, whiteSpace: "nowrap" }}>
+                    <ChevronRight size={14} style={{ color: T.t4 }} className="group-hover:text-gray-800 transition-colors" />
+                    Summary
+                  </div>
+                  <div style={{ width: 1, height: 12, background: T.bd }} />
+                  <div className="truncate" style={{ fontSize: 12, color: T.t3, flex: 1 }}>
+                    {desc || "No description provided..."}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-5 mb-4" style={{ borderBottom: `1px solid ${T.bd}` }}>
+          <div className="flex-1 overflow-y-auto p-5 relative">
+            <div className="flex items-center gap-5 mb-4" style={{ borderBottom: `1px solid ${T.bd}` }}>
             {[
               { id: "steps", l: `Steps (${steps.length})` },
               { id: "scripts", l: "Scripts" },
@@ -247,31 +287,29 @@ export default function TestCaseGeneratorPrototype() {
             <>
               {showAI && <AISugg items={AI_STEPS} done={aiDone} onOk={okAI} onAll={okAllAI} onX={() => setShowAI(false)} />}
               <div className="rounded-lg overflow-hidden" style={{ background: T.card, border: `1px solid ${T.bd}`, boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
-                <Toolbar onUndo={doUndo} onRedo={doRedo} canUndo={undo.length > 0} canRedo={redo.length > 0} onPaste={doPaste} onAdd={add} />
-                <table className="w-full">
-                  <thead>
+                <Toolbar onUndo={doUndo} onRedo={doRedo} canUndo={undo.length > 0} canRedo={redo.length > 0} onPaste={doPaste} onAdd={add} template={template} setTemplate={setTemplate} />
+                <table className="w-full" style={{ tableLayout: "fixed" }}>
+                  <thead className="sticky z-10" style={{ top: 29 }}>
                     <tr style={{ background: T.muted, borderBottom: `1px solid ${T.bd}` }}>
-                      <th className="w-10" />
-                      <th className="w-6" />
-                      {[["38%", "Test Steps"], ["32%", "Expected Results"], ["22%", "Test Data"]].map(([w, h], i) => (
-                        <th key={h} className="text-left px-2.5 py-2" style={{ width: w, fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5, borderLeft: i > 0 ? `1px solid ${T.bd}` : undefined }}>{h}</th>
+                      <th className="w-10 bg-inherit" />
+                      <th className="w-6 bg-inherit" />
+                      {(template === 'bdd' ? [["20%", "Keyword"], ["49%", "Step Definition"], ["22%", "Test Data"]] : [["38%", "Test Steps"], ["32%", "Expected Results"], ["22%", "Test Data"]]).map(([w, h], i) => (
+                        <th key={h} className="text-left px-2.5 py-1.5 bg-inherit" style={{ width: w, fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5, borderLeft: i > 0 ? `1px solid ${T.bd}` : undefined }}>{h}</th>
                       ))}
-                      <th className="w-14" />
+                      <th className="w-14 bg-inherit" />
                     </tr>
                   </thead>
                   <tbody>
                     {steps.map((s, i) => {
                       const issues = stepIssueMap[s.id] || [];
                       const isHighlighted = highlightStep === s.id;
-                      const chipIssue = isHighlighted ? issues[0] : null;
+                      const chipIssue = issues[0] || null;
                       return (
                         <React.Fragment key={s.id}>
                           <StepRow s={s} idx={i} ac={ac} onAc={setAc} onUp={upd} onDel={del} onDS={ds} onDO={dO} onDr={dr}
-                            drag={dOver === i} issues={issues} highlighted={isHighlighted} inlineChip={chipIssue}
-                            onDismissChip={() => setHighlightStep(null)}
-                            onHighlightStep={(id) => { setHighlightStep(id); setTimeout(() => setHighlightStep(null), 6000); }} />
-                          <InsertZone onHover={() => setHoverInsert(i + 1)} onLeave={() => setHoverInsert(null)} onInsert={() => insertAt(i + 1)} />
-                          <InsertLine visible={hoverInsert === i + 1} onInsert={() => insertAt(i + 1)} />
+                            drag={dOver === i} issues={issues} highlighted={isHighlighted}
+                            onHighlightStep={(id) => { setHighlightStep(id); setTimeout(() => setHighlightStep(null), 6000); }} 
+                            template={template} onAddRow={insertAt} onMultiPaste={handleMultiPaste} />
                         </React.Fragment>
                       );
                     })}
@@ -332,9 +370,12 @@ export default function TestCaseGeneratorPrototype() {
           )}
 
         </div>
+        </div>
 
         <RPanel meta={meta} setMeta={(k, v) => setMeta(p => ({ ...p, [k]: v }))} open={panel} toggle={() => setPanel(!panel)}
-          width={panelW} onResize={setPanelW} />
+          width={panelW} onResize={setPanelW} 
+          desc={desc} setDesc={setDesc}
+          pre={pre} setPre={setPre} preOpen={preOpen} setPreOpen={setPreOpen} />
       </div>
 
       <Toast show={toast.show} msg={toast.msg} />

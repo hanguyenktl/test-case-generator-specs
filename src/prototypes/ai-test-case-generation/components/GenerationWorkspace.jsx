@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, ExternalLink, File, FolderOpen, Link2, Loader2, Pencil, RotateCcw, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp, Upload, X } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, ExternalLink, File, FolderOpen, Link2, Loader2, Pencil, RotateCcw, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp, Upload, X } from 'lucide-react';
 import { T } from '../../../utils/design-system';
 import { ConfBadge, PriBadge, IBtn, Button, RightDrawer } from '../../../components/shared';
 import { ALL_CASES, PIPELINE_STEPS, MOCK_FOLDERS } from '../data/mockData';
@@ -99,8 +99,8 @@ export const InputCollapsed = ({ entry, onExpand, onGenerate, generating }) => (
           Generate
         </Button>
       ) : (
-        <span className="flex items-center gap-1.5 px-3 py-1.5" style={{ fontSize: 12, color: T.t4 }}>
-          <Loader2 size={12} className="animate-spin" style={{ color: T.brand }} /> Generating...
+        <span className="flex items-center gap-1.5 px-3 py-1.5" style={{ fontSize: 12, color: T.brand, fontWeight: 500 }}>
+          <Sparkles size={13} className="animate-kai-sparkle" /> Kai is generating...
         </span>
       )}
     </div>
@@ -154,7 +154,15 @@ export const InputExpanded = ({ entry, onCollapse, onGenerate, text, setText, fi
           style={{ fontSize: 12, color: T.t2, background: T.bg, border: `1px solid ${T.bd}`, borderRadius: 6, padding: "8px 10px", lineHeight: 1.6 }}
           onFocus={e => e.currentTarget.style.boxShadow = `inset 0 0 0 1.5px ${T.brand}`}
           onBlur={e => e.currentTarget.style.boxShadow = "none"} />
-        <span style={{ fontSize: 10, color: T.t4 }}>{text.length} / 32,000</span>
+        <div className="flex items-center justify-between mt-1.5">
+          <span style={{ fontSize: 10, color: T.t4 }}>{text.length} / 32,000</span>
+          {text.length > 20 && !generating && (
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={9} className="animate-pulse" style={{ color: T.brand }} />
+              <span style={{ fontSize: 9, color: T.brand, fontWeight: 500 }}>Kai is analyzing your intent...</span>
+            </div>
+          )}
+        </div>
       </div>
       {/* Files */}
       <div className="mb-3">
@@ -294,29 +302,34 @@ export const DetailPanel = ({ tc, onClose, onAccept, onReject }) => {
         </div>
         {/* Steps */}
         <div className="mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <span style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5 }}>Steps ({tc.stepsData?.length})</span>
-            <button className="flex items-center gap-1" style={{ fontSize: 10, color: T.brand }}><Pencil size={9} /> Edit</button>
+          <div className="flex items-center justify-between mb-2.5">
+            <span style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.5 }}>Test Steps ({tc.stepsData?.length})</span>
+            <button className="flex items-center gap-1 hover:underline" style={{ fontSize: 10, color: T.brand }}><Pencil size={9} /> Edit</button>
           </div>
-          <div className="rounded-md overflow-hidden" style={{ border: `1px solid ${T.bd}` }}>
-            <table className="w-full">
-              <thead>
-                <tr style={{ background: T.muted }}>
-                  <th className="text-left px-2 py-1" style={{ fontSize: 9, fontWeight: 600, color: T.t4, width: 24 }}>#</th>
-                  <th className="text-left px-2 py-1" style={{ fontSize: 9, fontWeight: 600, color: T.t4 }}>Action</th>
-                  <th className="text-left px-2 py-1" style={{ fontSize: 9, fontWeight: 600, color: T.t4 }}>Expected</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tc.stepsData?.map((s, i) => (
-                  <tr key={i} style={{ borderBottom: `1px solid ${T.bdLight}` }}>
-                    <td className="px-2 py-1.5 align-top" style={{ fontSize: 10, color: T.t4 }}>{i + 1}</td>
-                    <td className="px-2 py-1.5 align-top" style={{ fontSize: 10, color: T.t2, lineHeight: 1.45 }}>{s.action}</td>
-                    <td className="px-2 py-1.5 align-top" style={{ fontSize: 10, color: T.t2, lineHeight: 1.45 }}>{s.expected}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {tc.stepsData?.map((s, i) => (
+              <div key={i} className="group relative pl-6">
+                {/* Step number */}
+                <div className="absolute left-0 top-0 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: T.bg, border: `1px solid ${T.bdLight}`, fontSize: 9, color: T.t3, fontWeight: 600 }}>
+                  {i + 1}
+                </div>
+                {/* Action */}
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div style={{ fontSize: 11, color: T.t1, fontWeight: 500, lineHeight: 1.5 }}>
+                    {s.action}
+                  </div>
+                  <button onClick={() => { navigator.clipboard.writeText(s.action + "\n" + s.expected); }}
+                    className="p-1 rounded hover:bg-gray-100 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy Step">
+                    <ClipboardList size={11} />
+                  </button>
+                </div>
+                {/* Expected Result Bubble */}
+                <div className="rounded-md p-2" style={{ background: "rgba(94,106,210,0.03)", border: `1px solid ${T.accentBorder}`, borderLeft: `2px solid ${T.brand}` }}>
+                  <div style={{ fontSize: 9, color: T.brand, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>Expected Result</div>
+                  <div style={{ fontSize: 11, color: T.t2, lineHeight: 1.45 }}>{s.expected}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
         {/* Actions */}

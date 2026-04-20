@@ -1,12 +1,16 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { ChevronDown, ChevronRight, FileText, Tag, GitBranch, Clock, Plus, ExternalLink, X, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Tag, GitBranch, Clock, Plus, ExternalLink, X, PanelRightOpen, PanelRightClose, Paperclip, File, ImageIcon, FileSpreadsheet, Flag, User, PlayCircle, Timer, Box, Layers, Monitor, Server } from 'lucide-react';
 import { T } from '../../../utils/design-system';
+import { ATTACHMENTS } from '../data/mockData';
 
 import { Badge, RightDrawer, DrawerSection } from '../../../components/shared';
 
-export const Sel = ({ label, value, opts, onChange, required }) => (
+export const Sel = ({ label, value, opts, onChange, required, icon: Icon }) => (
   <div className="mb-2.5">
-    <label style={{ fontSize: 11, color: T.t4, fontWeight: 500, display: "block", marginBottom: 3 }}>{label}{required && <span style={{ color: T.red }}> *</span>}</label>
+    <label style={{ fontSize: 11, color: T.t4, fontWeight: 500, display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
+      {Icon && <Icon size={11} />}
+      {label}{required && <span style={{ color: T.red }}> *</span>}
+    </label>
     <select value={value} onChange={e => onChange?.(e.target.value)} className="w-full outline-none cursor-pointer"
       style={{ fontSize: 12, fontWeight: 400, color: T.t2, background: T.bg, border: `1px solid ${T.bd}`, borderRadius: 5, padding: "4px 6px", lineHeight: 1.4 }}>
       {opts.map(o => <option key={o} value={o}>{o}</option>)}
@@ -25,6 +29,9 @@ export const RPanel = ({ meta, setMeta, open, toggle, width, onResize }) => {
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
   }, [width, onResize]);
+
+  const fileIcon = (type) => type === "pdf" ? File : type === "image" ? ImageIcon : FileSpreadsheet;
+
 
   if (!open) return (
     <div className="shrink-0 flex flex-col items-center pt-2" style={{ borderLeft: `1px solid ${T.bd}`, background: T.card }}>
@@ -51,18 +58,19 @@ export const RPanel = ({ meta, setMeta, open, toggle, width, onResize }) => {
               <span style={{ fontSize: 12, color: T.t2 }}>{meta.status}</span>
             </div>
           </div>
-          <Sel label="Priority" value={meta.priority} opts={["Critical", "High", "Medium", "Low"]} onChange={v => setMeta("priority", v)} />
-          <Sel label="Assignee" value={meta.assignee} opts={["Huy Dao", "Anh Le", "Vuong Thien Phu", "Unassigned"]} onChange={v => setMeta("assignee", v)} />
-          <Sel label="Reviewer" value={meta.reviewer || "Anh Le"} opts={["Anh Le", "Huy Dao", "Vuong Thien Phu", "Unassigned"]} onChange={v => setMeta("reviewer", v)} />
-          <Sel label="Execution Type" value={meta.execType || "Manual"} opts={["Manual", "Automated", "Semi-automated"]} onChange={v => setMeta("execType", v)} />
-          <Sel label="Estimated Duration" value={meta.duration || "5 min"} opts={["1 min", "2 min", "5 min", "10 min", "15 min", "30 min", "60 min"]} onChange={v => setMeta("duration", v)} />
+          <Sel label="Priority" icon={Flag} value={meta.priority} opts={["Critical", "High", "Medium", "Low"]} onChange={v => setMeta("priority", v)} />
+          <Sel label="Assignee" icon={User} value={meta.assignee} opts={["Huy Dao", "Anh Le", "Vuong Thien Phu", "Unassigned"]} onChange={v => setMeta("assignee", v)} />
+          <Sel label="Reviewer" icon={User} value={meta.reviewer || "Anh Le"} opts={["Anh Le", "Huy Dao", "Vuong Thien Phu", "Unassigned"]} onChange={v => setMeta("reviewer", v)} />
+          <Sel label="Execution Type" icon={PlayCircle} value={meta.execType || "Manual"} opts={["Manual", "Automated", "Semi-automated"]} onChange={v => setMeta("execType", v)} />
+          <Sel label="Estimated Duration" icon={Timer} value={meta.duration || "5 min"} opts={["1 min", "2 min", "5 min", "10 min", "15 min", "30 min", "60 min"]} onChange={v => setMeta("duration", v)} />
         </DrawerSection>
 
+
         <DrawerSection title="Classification" icon={Tag}>
-          <Sel label="Module" value="Authentication" opts={["Authentication", "Dashboard", "Reports", "User Management", "API", "Settings"]} />
-          <Sel label="Test Type" value="Functional" opts={["Functional", "Regression", "Smoke", "Integration", "E2E", "UAT"]} />
-          <Sel label="Environment" value={meta.env || "Staging"} opts={["Production", "Staging", "QA", "Dev", "All"]} onChange={v => setMeta("env", v)} />
-          <Sel label="Platform" value={meta.platform || "Web — Chrome"} opts={["Web — Chrome", "Web — Firefox", "Web — Safari", "iOS — Mobile", "Android — Mobile", "API"]} onChange={v => setMeta("platform", v)} />
+          <Sel label="Module" icon={Box} value="Authentication" opts={["Authentication", "Dashboard", "Reports", "User Management", "API", "Settings"]} />
+          <Sel label="Test Type" icon={Layers} value="Functional" opts={["Functional", "Regression", "Smoke", "Integration", "E2E", "UAT"]} />
+          <Sel label="Environment" icon={Server} value={meta.env || "Staging"} opts={["Production", "Staging", "QA", "Dev", "All"]} onChange={v => setMeta("env", v)} />
+          <Sel label="Platform" icon={Monitor} value={meta.platform || "Web — Chrome"} opts={["Web — Chrome", "Web — Firefox", "Web — Safari", "iOS — Mobile", "Android — Mobile", "API"]} onChange={v => setMeta("platform", v)} />
           <div className="mb-2">
             <label style={{ fontSize: 11, color: T.t4, fontWeight: 500, display: "block", marginBottom: 3 }}>Tags</label>
             <div className="flex flex-wrap gap-1 mb-1.5">

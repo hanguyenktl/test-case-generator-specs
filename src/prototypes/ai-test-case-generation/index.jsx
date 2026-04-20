@@ -233,7 +233,7 @@ export default function AITestCaseGenerationPrototype() {
               <div className="flex-1 flex overflow-hidden">
 
                 {/* LEFT: Input Context Panel */}
-                <div className="overflow-y-auto shrink-0" style={{ width: 260, borderRight: `1px solid ${T.bd}`, background: T.card }}>
+                <div className="overflow-y-auto shrink-0 animate-slide-in-left" style={{ width: 260, borderRight: `1px solid ${T.bd}`, background: T.card, transition: "width 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
                   <div className="px-3 py-2" style={{ borderBottom: `1px solid ${T.bdLight}` }}>
                     <span style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6 }}>Input Context</span>
                   </div>
@@ -295,7 +295,7 @@ export default function AITestCaseGenerationPrototype() {
                 </div>
 
                 {/* MIDDLE: Results List */}
-                <div className="flex-1 flex flex-col overflow-hidden bg-white" style={{ minWidth: 0 }}>
+                <div className="flex-1 flex flex-col overflow-hidden bg-white animate-fade-in-up" style={{ minWidth: 0 }}>
                   {/* List header/tabs */}
                   <div className="flex items-center justify-between px-4 shrink-0" style={{ background: T.card, borderBottom: `1px solid ${T.bd}` }}>
                     <div className="flex items-center gap-0">
@@ -316,7 +316,7 @@ export default function AITestCaseGenerationPrototype() {
                     {isDone && (
                       <div className="flex items-center gap-3">
                         <span style={{ fontSize: 11, color: T.t3 }}>{tab === "accepted" ? accepted.length : (tab === "review" ? cases.filter(c => c.selected).length : 0)} selected</span>
-                        <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors"
+                        <button onClick={handleSave} className={`flex items-center gap-1 px-3 py-1.5 rounded-md transition-all ${(tab === "accepted" && accepted.length > 0) || (tab === "review" && cases.some(c => c.selected)) ? "animate-glow" : ""}`}
                           style={{ background: (tab === "accepted" && accepted.length > 0) || (tab === "review" && cases.some(c => c.selected)) ? T.brand : T.muted, color: "#fff", fontSize: 11, fontWeight: 500 }}>
                           Save {tab === "accepted" ? accepted.length : "Selected"} Test Cases
                         </button>
@@ -382,12 +382,30 @@ export default function AITestCaseGenerationPrototype() {
                                 const isAct = selectedId === tc.id;
                                 const confColor = tc.confidence === "high" ? T.green : tc.confidence === "medium" ? T.amber : T.red;
                                 return (
-                                  <div key={tc.id} className="group relative flex transition-colors cursor-pointer border-b"
-                                    style={{
-                                      borderColor: T.bdLight,
-                                      background: isAct ? T.accentLight : "transparent",
-                                    }}
-                                    onClick={() => setSelectedId(tc.id)}>
+                                    <div key={tc.id} className="group relative flex transition-all cursor-pointer border-b"
+                                      style={{
+                                        borderColor: T.bdLight,
+                                        background: isAct ? T.accentLight : "transparent",
+                                        borderLeft: `3px solid ${confColor}`
+                                      }}
+                                      onClick={() => setSelectedId(tc.id)}>
+                                      
+                                      {/* Floating quick actions on hover */}
+                                      {!selectedId && tab === "review" && (
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-1.5 p-1 rounded-lg bg-white shadow-lg border z-10"
+                                          style={{ borderColor: T.bdLight }}>
+                                          <button onClick={e => { e.stopPropagation(); handleAccept(tc.id); }} className="p-1.5 rounded hover:bg-emerald-50 text-emerald-600 transition-colors" title="Accept">
+                                            <CheckCircle size={14} />
+                                          </button>
+                                          <button onClick={e => { e.stopPropagation(); handleReject(tc.id); }} className="p-1.5 rounded hover:bg-rose-50 text-rose-600 transition-colors" title="Reject">
+                                            <RotateCcw size={14} className="scale-x-[-1]" />
+                                          </button>
+                                          <div className="w-px h-3 bg-gray-200 mx-0.5" />
+                                          <button onClick={e => { e.stopPropagation(); setSelectedId(tc.id); }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400" title="View Detail">
+                                            <ExternalLink size={14} />
+                                          </button>
+                                        </div>
+                                      )}
                                     
                                     {selectedId ? (
                                       /* Compact row when detail panel open */
@@ -400,9 +418,9 @@ export default function AITestCaseGenerationPrototype() {
                                       <>
                                         {/* Selection / Status indicator */}
                                         <div className="w-10 flex justify-center items-center py-3 shrink-0" onClick={e => { e.stopPropagation(); toggleSelect(tc.id); }}>
-                                          <div className="w-4 h-4 rounded border flex items-center justify-center transition-colors"
-                                            style={{ borderColor: sel ? T.brand : T.t4, background: sel ? T.brand : "transparent" }}>
-                                            {sel && <Check size={12} style={{ color: "#fff", strokeWidth: 3 }} />}
+                                          <div className="w-4 h-4 rounded border flex items-center justify-center transition-all duration-200"
+                                            style={{ borderColor: sel ? T.brand : T.t4, background: sel ? T.brand : "transparent", transform: sel ? "scale(1.1)" : "scale(1)" }}>
+                                            {sel && <Check size={12} style={{ color: "#fff", strokeWidth: 3 }} className="animate-in zoom-in duration-200" />}
                                           </div>
                                         </div>
                                         {/* Name & Metadata */}
@@ -466,7 +484,7 @@ export default function AITestCaseGenerationPrototype() {
                         {/* Generation loading state */}
                         {isGen && pipeStep >= 3 && streamCount < ALL_CASES.length && (
                           <div className="p-4 flex items-center gap-3 bg-white" style={{ borderBottom: `1px solid ${T.bdLight}` }}>
-                            <Loader2 size={13} className="animate-spin" style={{ color: T.brand }} />
+                            <Sparkles size={13} className="animate-kai-sparkle" style={{ color: T.brand }} />
                             <span style={{ fontSize: 11, color: T.brand, fontWeight: 500 }}>Kai is generating test cases... ({streamCount}/{ALL_CASES.length})</span>
                           </div>
                         )}
@@ -476,10 +494,18 @@ export default function AITestCaseGenerationPrototype() {
                 </div>
 
                 {/* RIGHT PANEL (Detail) */}
-                <DetailPanel tc={selectedTc}
-                  onClose={() => setSelectedId(null)}
-                  onAccept={id => handleAccept(id)}
-                  onReject={id => handleReject(id)} />
+                <div style={{ 
+                  width: selectedId ? 380 : 0, 
+                  transition: "width 0.4s cubic-bezier(0.16, 1, 0.3, 1)", 
+                  overflow: "hidden", 
+                  display: "flex", 
+                  flexShrink: 0 
+                }}>
+                  <DetailPanel tc={selectedTc}
+                    onClose={() => setSelectedId(null)}
+                    onAccept={id => handleAccept(id)}
+                    onReject={id => handleReject(id)} />
+                </div>
               </div>
             )}
           </div>

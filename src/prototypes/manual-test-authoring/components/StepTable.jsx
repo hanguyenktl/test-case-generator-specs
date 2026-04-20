@@ -3,8 +3,18 @@ import { Undo2, Redo2, Bold, Italic, Link2, List, Image, Copy, Plus, GripVertica
 import { T } from '../../../utils/design-system';
 import { IBtn, Button } from '../../../components/shared';
 
-export const Toolbar = ({ onUndo, onRedo, canUndo, canRedo, onPaste, onAdd }) => (
-  <div className="flex items-center gap-px px-2 py-1" style={{ background: T.muted, borderBottom: `1px solid ${T.bd}` }}>
+export const Toolbar = ({ onUndo, onRedo, canUndo, canRedo, onPaste, onAdd, template, setTemplate }) => (
+  <div className="flex items-center gap-px px-2 py-1 sticky top-0 z-20" style={{ background: T.muted, borderBottom: `1px solid ${T.bd}` }}>
+    {setTemplate && (
+      <>
+        <select value={template} onChange={e => setTemplate(e.target.value)} className="outline-none cursor-pointer"
+          style={{ fontSize: 11, fontWeight: 500, color: T.t2, background: "transparent", border: "none" }}>
+          <option value="manual">Manual Steps</option>
+          <option value="bdd">BDD (Gherkin)</option>
+        </select>
+        <div style={{ width: 1, height: 14, background: T.bd, margin: "0 8px" }} />
+      </>
+    )}
     <IBtn onClick={onUndo} disabled={!canUndo} title="Undo"><Undo2 size={14} strokeWidth={1.6} /></IBtn>
     <IBtn onClick={onRedo} disabled={!canRedo} title="Redo"><Redo2 size={14} strokeWidth={1.6} /></IBtn>
     <div style={{ width: 1, height: 14, background: T.bd, margin: "0 5px" }} />
@@ -25,13 +35,34 @@ export const Toolbar = ({ onUndo, onRedo, canUndo, canRedo, onPaste, onAdd }) =>
   </div>
 );
 
-export const Cell = ({ value, onChange, active, onFocus, ph }) => (
-  <div contentEditable suppressContentEditableWarning
-    className="min-h-[32px] px-2.5 py-1.5 outline-none whitespace-pre-wrap transition-shadow"
-    style={{ fontSize: 13, lineHeight: 1.55, color: value ? T.t2 : T.t4, background: active ? "rgba(79,70,229,0.04)" : "transparent", borderRadius: 3, boxShadow: active ? `inset 0 0 0 1.5px ${T.brand}` : "none" }}
-    onFocus={onFocus} onBlur={e => onChange(e.target.innerText)}
-    dangerouslySetInnerHTML={{ __html: value || `<span style="color:${T.t4}">${ph || ""}</span>` }} />
-);
+export const Cell = ({ value, onChange, active, onFocus, ph, onKeyDown, onMultiPaste, hasWarning }) => {
+  const handlePaste = (e) => {
+    const text = e.clipboardData.getData("text/plain");
+    if ((text.includes("\t") || text.includes("\n")) && onMultiPaste) {
+      const rows = text.split(/\r?\n/).filter(r => r.trim()).map(r => r.split("\t"));
+      if (rows.length > 0 && (rows.length > 1 || rows[0].length > 1)) {
+        e.preventDefault();
+        onMultiPaste(rows);
+        return;
+      }
+    }
+    // Default plain text paste handling to avoid rich text
+    e.preventDefault();
+    document.execCommand("insertText", false, text);
+  };
+
+  const bg = active ? "rgba(79,70,229,0.04)" : hasWarning ? "rgba(217,119,6,0.04)" : "transparent";
+  const shadow = active ? `inset 0 0 0 1.5px ${T.brand}` : hasWarning ? `inset 0 0 0 1px ${T.amber}` : "none";
+
+  return (
+    <div contentEditable suppressContentEditableWarning
+      className="min-h-[32px] px-2.5 py-1.5 outline-none whitespace-pre-wrap transition-all relative"
+      style={{ fontSize: 13, lineHeight: 1.55, color: value ? T.t2 : T.t4, background: bg, borderRadius: 3, boxShadow: shadow }}
+      onFocus={onFocus} onBlur={e => onChange(e.target.innerText)}
+      onKeyDown={onKeyDown} onPaste={handlePaste}
+      dangerouslySetInnerHTML={{ __html: value || `<span style="color:${T.t4}">${ph || ""}</span>` }} />
+  );
+};
 
 export const GutterIndicator = ({ issues, onHighlight }) => {
   const [hover, setHover] = useState(false);
@@ -55,13 +86,13 @@ export const GutterIndicator = ({ issues, onHighlight }) => {
         onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
         className="flex items-center justify-center rounded-full transition-all"
         style={{
-          width: hover || showPop ? 18 : 14,
-          height: hover || showPop ? 18 : 14,
+          width: 18,
+          height: 18,
           background: hover || showPop ? bgTint : `${color}18`,
           border: `1.5px solid ${hover || showPop ? color : borderTint}`,
           cursor: "pointer",
         }}>
-        <AlertTriangle size={hover || showPop ? 10 : 8} style={{ color }} strokeWidth={2} />
+        <AlertTriangle size={10} style={{ color }} strokeWidth={2} />
       </button>
       {showPop && (
         <div className="absolute z-50" style={{ left: 24, top: -4, width: 260, background: T.card, border: `1px solid ${T.bd}`, borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", overflow: "hidden" }}>
@@ -98,7 +129,7 @@ export const GutterIndicator = ({ issues, onHighlight }) => {
   );
 };
 
-export const StepAIMenu = ({ onAction }) => {
+export const StepAIMenu = ({ onAction, visible }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -117,10 +148,10 @@ export const StepAIMenu = ({ onAction }) => {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(!open)}
-        className="w-6 h-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-        style={{ color: T.purple, background: open ? "rgba(124,58,237,0.08)" : "transparent" }}
-        onMouseEnter={e => e.currentTarget.style.background = "rgba(124,58,237,0.08)"}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.background = "transparent"; }}>
+        className={`w-6 h-6 rounded flex items-center justify-center transition-all ${visible || open ? "opacity-100" : "opacity-40 group-hover:opacity-100"}`}
+        style={{ color: visible || open ? T.purple : T.t4, background: open ? "rgba(124,58,237,0.08)" : "transparent" }}
+        onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.08)"; e.currentTarget.style.color = T.purple; }}
+        onMouseLeave={e => { if (!open) { e.currentTarget.style.background = "transparent"; if (!visible) e.currentTarget.style.color = T.t4; } }}>
         <Sparkles size={12} strokeWidth={1.8} />
       </button>
       {open && (
@@ -151,9 +182,21 @@ export const StepAIMenu = ({ onAction }) => {
   );
 };
 
-export const StepRow = ({ s, idx, ac, onAc, onUp, onDel, onDS, onDO, onDr, drag, issues, highlighted, inlineChip, onDismissChip, onHighlightStep }) => {
+export const StepRow = ({ s, idx, ac, onAc, onUp, onDel, onDS, onDO, onDr, drag, issues, highlighted, onHighlightStep, template, onAddRow, onMultiPaste }) => {
   const hasIssue = issues.length > 0;
   const isHighlighted = highlighted;
+  const fieldWarnings = issues.reduce((acc, iss) => { if (iss.field) acc[iss.field] = true; return acc; }, {});
+  
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      onAddRow(idx + 1);
+    }
+  };
+
+  const handleMultiPaste = (rows) => {
+    if (onMultiPaste) onMultiPaste(idx, rows);
+  };
   return (
     <>
       <tr data-step-id={s.id} className="group transition-colors"
@@ -181,18 +224,37 @@ export const StepRow = ({ s, idx, ac, onAc, onUp, onDel, onDS, onDO, onDr, drag,
             </div>
           )}
         </td>
-        <td className="align-top" style={{ width: "37%" }}>
-          <Cell value={s.step} onChange={v => onUp(s.id, "step", v)} active={ac === `${s.id}-s`} onFocus={() => onAc(`${s.id}-s`)} ph="Describe the test step..." />
-        </td>
-        <td className="align-top" style={{ width: "32%", borderLeft: `1px solid ${T.bdLight}` }}>
-          <Cell value={s.exp} onChange={v => onUp(s.id, "exp", v)} active={ac === `${s.id}-e`} onFocus={() => onAc(`${s.id}-e`)} ph="Expected result..." />
-        </td>
-        <td className="align-top" style={{ width: "22%", borderLeft: `1px solid ${T.bdLight}` }}>
-          <Cell value={s.data} onChange={v => onUp(s.id, "data", v)} active={ac === `${s.id}-d`} onFocus={() => onAc(`${s.id}-d`)} ph="Test data..." />
-        </td>
+        {template === 'bdd' ? (
+          <>
+            <td className="align-top" style={{ width: "20%" }}>
+              <select value={s.keyword || 'And'} onChange={e => onUp(s.id, "keyword", e.target.value)} 
+                className="w-full mt-1.5 outline-none font-mono cursor-pointer" style={{ fontSize: 12, color: T.purple, background: "transparent", border: "none" }}>
+                {["Given", "When", "Then", "And", "But"].map(k => <option key={k} value={k}>{k}</option>)}
+              </select>
+            </td>
+            <td className="align-top" style={{ width: "49%", borderLeft: `1px solid ${T.bdLight}` }}>
+              <Cell value={s.step} onChange={v => onUp(s.id, "step", v)} active={ac === `${s.id}-s`} onFocus={() => onAc(`${s.id}-s`)} ph="Step definition..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.step} />
+            </td>
+            <td className="align-top" style={{ width: "22%", borderLeft: `1px solid ${T.bdLight}` }}>
+              <Cell value={s.data} onChange={v => onUp(s.id, "data", v)} active={ac === `${s.id}-d`} onFocus={() => onAc(`${s.id}-d`)} ph="Test data..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.data} />
+            </td>
+          </>
+        ) : (
+          <>
+            <td className="align-top" style={{ width: "37%" }}>
+              <Cell value={s.step} onChange={v => onUp(s.id, "step", v)} active={ac === `${s.id}-s`} onFocus={() => onAc(`${s.id}-s`)} ph="Describe the test step..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.step} />
+            </td>
+            <td className="align-top" style={{ width: "32%", borderLeft: `1px solid ${T.bdLight}` }}>
+              <Cell value={s.exp} onChange={v => onUp(s.id, "exp", v)} active={ac === `${s.id}-e`} onFocus={() => onAc(`${s.id}-e`)} ph="Expected result..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.exp} />
+            </td>
+            <td className="align-top" style={{ width: "22%", borderLeft: `1px solid ${T.bdLight}` }}>
+              <Cell value={s.data} onChange={v => onUp(s.id, "data", v)} active={ac === `${s.id}-d`} onFocus={() => onAc(`${s.id}-d`)} ph="Test data..." onKeyDown={handleKeyDown} onMultiPaste={handleMultiPaste} hasWarning={fieldWarnings.data} />
+            </td>
+          </>
+        )}
         <td className="w-14 align-top pt-1.5">
           <div className="flex items-center gap-0.5 justify-end pr-1">
-            <StepAIMenu onAction={(a) => { /* placeholder */ }} />
+            <StepAIMenu onAction={(a) => { /* placeholder */ }} visible={ac?.startsWith(`${s.id}-`)} />
             <button onClick={() => onDel(s.id)} className="opacity-0 group-hover:opacity-100 p-1 rounded transition-colors" style={{ color: T.t4 }}
               onMouseEnter={e => { e.currentTarget.style.color = T.red; e.currentTarget.style.background = "rgba(220,38,38,0.06)"; }}
               onMouseLeave={e => { e.currentTarget.style.color = T.t4; e.currentTarget.style.background = "transparent"; }}>
@@ -201,24 +263,6 @@ export const StepRow = ({ s, idx, ac, onAc, onUp, onDel, onDS, onDO, onDr, drag,
           </div>
         </td>
       </tr>
-      {isHighlighted && inlineChip && (
-        <tr style={{ background: "rgba(217,119,6,0.04)" }}>
-          <td colSpan={2} />
-          <td colSpan={3} className="py-1.5 px-2.5">
-            <div className="flex items-center gap-2">
-              <AlertTriangle size={11} style={{ color: T.amber }} />
-              <span style={{ fontSize: 11, color: T.t2 }}>{inlineChip.msg}</span>
-              <button className="flex items-center gap-1 px-2 py-0.5 rounded" style={{ fontSize: 10, fontWeight: 500, color: T.brand, border: `1px solid ${T.accentBorder}`, background: T.accentLight }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(79,70,229,0.12)"} onMouseLeave={e => e.currentTarget.style.background = T.accentLight}>
-                <Sparkles size={10} /> Suggest
-              </button>
-              <button onClick={onDismissChip} style={{ fontSize: 10, color: T.t4 }}
-                onMouseEnter={e => e.currentTarget.style.color = T.t2} onMouseLeave={e => e.currentTarget.style.color = T.t4}>Dismiss</button>
-            </div>
-          </td>
-          <td />
-        </tr>
-      )}
     </>
   );
 };

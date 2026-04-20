@@ -40,3 +40,49 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #d1d5db;
 }
+
+/* Premium UX Animations */
+@keyframes kai-sparkle {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px rgba(94, 106, 210, 0.4)); }
+  50% { opacity: 0.6; transform: scale(1.1) rotate(15deg); filter: drop-shadow(0 0 8px rgba(94, 106, 210, 0.7)); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-kai-sparkle {
+  animation: kai-sparkle 2.5s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(94, 106, 210, 0.4); }
+  50% { box-shadow: 0 0 15px rgba(94, 106, 210, 0.8); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
