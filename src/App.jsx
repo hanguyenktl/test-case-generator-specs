@@ -2,9 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/shell/Layout';
 import Directory from './pages/Directory';
-
-// We will import prototypes here as they are decomposed
-// const TestCaseGenerator = React.lazy(() => import('./prototypes/test-case-generator'));
+import ManualTestAuthoringPrototype from './prototypes/manual-test-authoring';
+import AITestCaseGenerationPrototype from './prototypes/ai-test-case-generation';
 
 export default function App() {
   return (
@@ -18,16 +17,8 @@ export default function App() {
         } />
 
         {/* Individual Prototype Routes */}
-        <Route path="/prototypes/test-case-generator" element={
-          <Layout breadcrumbs={["TestOps", "Prototypes", "Test Case Generator"]}>
-            <div className="flex flex-col items-center justify-center h-full text-center p-10">
-              <h2 className="text-2xl font-bold mb-2">Refactoring in Progress</h2>
-              <p className="text-gray-500 max-w-md">
-                The legacy prototype has been archived. Ready for the new monolith drop to begin Trial #1.
-              </p>
-            </div>
-          </Layout>
-        } />
+        <Route path="/prototypes/manual-test-authoring" element={<ManualTestAuthoringPrototype />} />
+        <Route path="/prototypes/ai-test-case-generation" element={<AITestCaseGenerationPrototype />} />
 
         {/* Fallback */}
         <Route path="*" element={

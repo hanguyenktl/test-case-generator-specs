@@ -1,61 +1,39 @@
 import React from 'react';
-import { Home, ClipboardList, FlaskConical, Box, PlayCircle, BarChart3, Cloud, Settings, ChevronRight } from 'lucide-react';
+import { Home, ClipboardList, FlaskConical, Package, Play, BarChart3, Cloud, Settings } from 'lucide-react';
 import { T } from '../../utils/design-system';
 import { Link, useLocation } from 'react-router-dom';
 
-const navItems = [
-  { id: 'home', icon: Home, label: 'Home', path: '/' },
-  { id: 'plans', icon: ClipboardList, label: 'Plans', path: '/plans' },
-  { id: 'tests', icon: FlaskConical, label: 'Tests', path: '/tests' },
-  { id: 'assets', icon: Box, label: 'Assets', path: '/assets' },
-  { id: 'exec', icon: PlayCircle, label: 'Executions', path: '/executions' },
-  { id: 'reports', icon: BarChart3, label: 'Reports', path: '/reports' },
-  { id: 'cloud', icon: Cloud, label: 'TestCloud', path: '/testcloud' },
-  { id: 'settings', icon: Settings, label: 'Settings', path: '/settings' },
+const NAV = [
+  { icon: Home, id: "home", path: "/" }, 
+  { icon: ClipboardList, id: "plans", path: "/plans" },
+  { icon: FlaskConical, id: "tests", path: "/prototypes/test-case-generator" }, 
+  { icon: Package, id: "assets", path: "/assets" },
+  { icon: Play, id: "executions", path: "/executions" }, 
+  { icon: BarChart3, id: "reports", path: "/reports" },
+  { icon: Cloud, id: "testcloud", path: "/testcloud" }, 
+  { icon: Settings, id: "settings", path: "/settings" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ activeOverride }) {
   const location = useLocation();
 
   return (
-    <aside 
-      className="w-12 h-screen flex flex-col items-center py-4 border-r overflow-y-auto"
-      style={{ backgroundColor: T.sidebar, borderColor: T.border }}
-    >
-      <div className="mb-6">
-        <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-          K
-        </div>
-      </div>
-
-      <nav className="flex-1 flex flex-col gap-4">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.id}
-              to={item.path}
-              className="group relative flex items-center justify-center p-2 rounded-md transition-colors"
-              style={{ 
-                backgroundColor: isActive ? T.aiLight : 'transparent' 
-              }}
-              title={item.label}
-            >
-              <item.icon 
-                size={20} 
-                strokeWidth={isActive ? 2 : 1.6}
-                style={{ color: isActive ? T.brand : T.t3 }}
-              />
-              {isActive && (
-                <div 
-                  className="absolute left-0 w-1 h-4 rounded-r-full"
-                  style={{ backgroundColor: T.brand }}
-                />
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+    <div className="w-12 flex flex-col items-center py-3 gap-0.5 shrink-0 h-screen overflow-y-auto"
+      style={{ background: T.sidebar, borderRight: `1px solid ${T.sidebarBd}` }}>
+      <div className="w-7 h-7 rounded-md flex items-center justify-center text-white text-[10px] font-bold mb-4"
+        style={{ background: T.sidebarActive }}>K</div>
+      {NAV.map(({ icon: Icon, id, path }) => {
+        // Match either by activeOverride prop (if passed by prototype) or route matching
+        const a = activeOverride === id || location.pathname === path;
+        return (
+          <Link key={id} to={path} className="w-9 h-9 rounded-md flex items-center justify-center transition-all duration-100"
+            style={{ background: a ? T.accentLight : "transparent", color: a ? T.sidebarActive : T.sidebarIcon }}
+            onMouseEnter={e => { if (!a) { e.currentTarget.style.color = T.sidebarIconHover; e.currentTarget.style.background = T.hover; }}}
+            onMouseLeave={e => { if (!a) { e.currentTarget.style.color = T.sidebarIcon; e.currentTarget.style.background = "transparent"; }}}>
+            <Icon size={17} strokeWidth={1.6} />
+          </Link>
+        );
+      })}
+    </div>
   );
 }

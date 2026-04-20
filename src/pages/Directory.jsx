@@ -5,12 +5,21 @@ import { Link } from 'react-router-dom';
 
 const prototypes = [
   {
-    id: 'test-case-generator',
-    name: 'Test Case Generator',
+    id: 'manual-test-authoring',
+    name: 'Manual Test Authoring',
+    description: 'Legacy manual test authoring prototype with AI quality scoring and AI Runner confidence.',
+    icon: LayoutIcon,
+    status: 'Legacy',
+    path: '/prototypes/manual-test-authoring',
+    color: T.t3
+  },
+  {
+    id: 'ai-test-case-generation',
+    name: 'AI Test Case Generation',
     description: 'AI-powered manual to automated test case generation with dual-scoring verification.',
     icon: Wand2,
-    status: 'Legacy / Updating',
-    path: '/prototypes/test-case-generator',
+    status: 'Active',
+    path: '/prototypes/ai-test-case-generation',
     color: T.brand
   },
 ];
