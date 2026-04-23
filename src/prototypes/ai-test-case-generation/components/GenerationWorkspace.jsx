@@ -60,55 +60,160 @@ export const PipelineBar = ({ step, done, onCollapse }) => (
 );
 
 /* ═══════════════════════════════════════════════════════════════
-   INPUT SECTION — flush header bars, not floating cards
+   SETUP PAGE — full-workspace centered form for the idle state.
+   The form IS the task; no header bar, no collapse, no dead zone.
    ═══════════════════════════════════════════════════════════════ */
-export const InputCollapsed = ({ entry, onExpand, onGenerate, generating }) => (
-  <div className="flex items-center justify-between px-5 py-2 shrink-0" style={{ background: T.card, borderBottom: `1px solid ${T.bd}` }}>
-    <div className="flex items-center gap-3 min-w-0">
-      <Sparkles size={13} style={{ color: T.purple }} />
+export const SetupPage = ({ entry, onGenerate, text, setText, files, setFiles }) => (
+  <div className="flex-1 overflow-y-auto" style={{ background: T.bg }}>
+    <div className="mx-auto py-10 px-6" style={{ maxWidth: 600 }}>
+      {/* Context source */}
+      <div className="mb-5">
+        <label style={{ fontSize: 11, fontWeight: 500, color: T.t3, display: "block", marginBottom: 6 }}>Context source</label>
+        {entry === "j1" ? (
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-md" style={{ background: T.accentLight, border: `1px solid ${T.accentBorder}` }}>
+            <Link2 size={12} style={{ color: T.brand }} />
+            <span style={{ fontSize: 11, fontFamily: "ui-monospace, monospace", color: T.brand, fontWeight: 500 }}>TO-8526</span>
+            <span style={{ fontSize: 12, color: T.t1 }}>User authentication flow</span>
+            <div className="flex items-center gap-1 ml-auto" title="Requirement quality score">
+              <span style={{ fontSize: 10, color: T.t4 }}>Quality</span>
+              <span className="w-2 h-2 rounded-full" style={{ background: T.amber }} />
+              <span style={{ fontSize: 11, color: T.amber, fontWeight: 500 }}>72%</span>
+            </div>
+          </div>
+        ) : (
+          <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-md transition-colors"
+            style={{ border: `1px solid ${T.bd}`, background: T.card, textAlign: "left" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = T.brand}
+            onMouseLeave={e => e.currentTarget.style.borderColor = T.bd}>
+            <Link2 size={12} style={{ color: T.t4 }} />
+            <span style={{ fontSize: 12, color: T.t4 }}>+ Link a requirement (optional)</span>
+          </button>
+        )}
+      </div>
+      {/* Textarea */}
+      <div className="mb-5">
+        <label style={{ fontSize: 11, fontWeight: 500, color: T.t3, display: "block", marginBottom: 6 }}>Describe your requirements</label>
+        <textarea value={text} onChange={e => setText(e.target.value)}
+          placeholder="Paste requirement text, user story, or describe the feature you want to test..."
+          rows={6}
+          className="w-full outline-none resize-none"
+          style={{ fontSize: 12, color: T.t2, background: T.card, border: `1px solid ${T.bd}`, borderRadius: 6, padding: "10px 12px", lineHeight: 1.6 }}
+          onFocus={e => e.currentTarget.style.boxShadow = `inset 0 0 0 1.5px ${T.brand}`}
+          onBlur={e => e.currentTarget.style.boxShadow = "none"} />
+        <div className="flex items-center justify-between mt-1.5">
+          <span style={{ fontSize: 10, color: T.t4 }}>{text.length} / 32,000</span>
+          {text.length > 20 && (
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={9} className="animate-pulse" style={{ color: T.brand }} />
+              <span style={{ fontSize: 9, color: T.brand, fontWeight: 500 }}>Kai is analyzing your intent...</span>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Attachments */}
+      <div className="mb-5">
+        <label style={{ fontSize: 11, fontWeight: 500, color: T.t3, display: "block", marginBottom: 6 }}>Attachments</label>
+        {files.length > 0 ? files.map((f, i) => (
+          <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-md mb-1.5" style={{ background: T.card, border: `1px solid ${T.bdLight}` }}>
+            <File size={11} style={{ color: T.brand }} />
+            <span style={{ fontSize: 11, color: T.t1, fontWeight: 500 }}>{f.name}</span>
+            <span style={{ fontSize: 10, color: T.t4 }}>{f.size}</span>
+            <div className="flex-1" />
+            <button onClick={() => setFiles(files.filter((_, j) => j !== i))} style={{ color: T.t4 }}
+              onMouseEnter={e => e.currentTarget.style.color = T.red}
+              onMouseLeave={e => e.currentTarget.style.color = T.t4}><X size={10} /></button>
+          </div>
+        )) : (
+          <div className="flex items-center gap-2 px-3 py-3 rounded-md cursor-pointer transition-colors"
+            style={{ border: `1px dashed ${T.bd}`, background: T.card }}
+            onClick={() => setFiles([{ name: "auth-flow-spec.pdf", size: "1.2 MB" }])}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = T.brand; e.currentTarget.style.background = T.accentLight; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = T.bd; e.currentTarget.style.background = T.card; }}>
+            <Upload size={13} style={{ color: T.t4 }} />
+            <span style={{ fontSize: 12, color: T.t3 }}>Drop files or click to browse</span>
+            <span style={{ fontSize: 10, color: T.t4, marginLeft: "auto" }}>Max 10 MB</span>
+          </div>
+        )}
+      </div>
+      {/* Generation settings */}
+      <div className="flex items-center gap-4 mb-8">
+        <div>
+          <label style={{ fontSize: 10, color: T.t4, fontWeight: 500, display: "block", marginBottom: 4 }}>Output format</label>
+          <select style={{ fontSize: 11, fontWeight: 400, color: T.t2, background: T.card, border: `1px solid ${T.bd}`, borderRadius: 4, padding: "4px 8px" }}>
+            <option>With test steps</option><option>Without steps</option><option>BDD / Gherkin</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: 10, color: T.t4, fontWeight: 500, display: "block", marginBottom: 4 }}>Target folder</label>
+          <select style={{ fontSize: 11, fontWeight: 400, color: T.t2, background: T.card, border: `1px solid ${T.bd}`, borderRadius: 4, padding: "4px 8px" }}>
+            {MOCK_FOLDERS.map(f => <option key={f}>{f}</option>)}
+          </select>
+        </div>
+      </div>
+      {/* Single primary CTA */}
+      <button onClick={onGenerate}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-md transition-all"
+        style={{ background: T.brand, color: "#fff", fontSize: 13, fontWeight: 500 }}
+        onMouseEnter={e => e.currentTarget.style.background = T.accent}
+        onMouseLeave={e => e.currentTarget.style.background = T.brand}>
+        <Sparkles size={14} /> Generate Test Cases
+      </button>
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   CONTEXT BAR — thin header shown during generation / review
+   Replaces the accordion + sidebar duplication pattern.
+   ═══════════════════════════════════════════════════════════════ */
+export const ContextBar = ({ entry, onEdit, generating }) => (
+  <div className="flex items-center justify-between px-5 py-2 shrink-0"
+    style={{ background: T.card, borderBottom: `1px solid ${T.bd}` }}>
+    <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+      <Sparkles size={12} style={{ color: T.purple, flexShrink: 0 }} />
       {entry === "j1" && <>
         <div className="flex items-center gap-1.5">
-          <Link2 size={11} style={{ color: T.brand }} strokeWidth={1.5} />
+          <Link2 size={10} style={{ color: T.brand }} strokeWidth={1.5} />
           <span style={{ fontSize: 11, fontFamily: "ui-monospace, monospace", color: T.brand, fontWeight: 500 }}>TO-8526</span>
         </div>
-        <span style={{ fontSize: 12, color: T.t2 }}>User authentication flow</span>
+        <span style={{ fontSize: 12, color: T.t2, whiteSpace: "nowrap" }}>User authentication flow</span>
         <span style={{ fontSize: 10, color: T.t4 }}>&middot;</span>
-        <div className="flex items-center gap-1" title="Requirement Quality Score">
-          <span style={{ fontSize: 10, color: T.t4 }}>Quality</span>
-          <span className="w-2 h-2 rounded-full" style={{ background: T.amber }} />
-          <span style={{ fontSize: 11, color: T.amber, fontWeight: 500 }}>72%</span>
+        <div className="flex items-center gap-1" title="Requirement quality score">
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: T.amber }} />
+          <span style={{ fontSize: 10, color: T.amber, fontWeight: 500 }}>72%</span>
         </div>
         <span style={{ fontSize: 10, color: T.t4 }}>&middot;</span>
         <div className="flex items-center gap-1">
           <File size={10} style={{ color: T.t4 }} />
-          <span style={{ fontSize: 11, color: T.t3 }}>1 file</span>
+          <span style={{ fontSize: 10, color: T.t3 }}>auth-flow-spec.pdf</span>
         </div>
         <span style={{ fontSize: 10, color: T.t4 }}>&middot;</span>
-        <span style={{ fontSize: 11, color: T.t3 }}>4,200 chars</span>
+        <span style={{ fontSize: 10, color: T.t3 }}>4,200 chars</span>
       </>}
       {entry === "j2" && <>
         <span style={{ fontSize: 12, color: T.t2 }}>User authentication flow</span>
         <span style={{ fontSize: 10, color: T.t4 }}>&middot;</span>
         <div className="flex items-center gap-1">
           <File size={10} style={{ color: T.t4 }} />
-          <span style={{ fontSize: 11, color: T.t3 }}>1 file</span>
+          <span style={{ fontSize: 10, color: T.t3 }}>auth-flow-spec.pdf</span>
         </div>
         <span style={{ fontSize: 10, color: T.t4 }}>&middot;</span>
-        <span style={{ fontSize: 11, color: T.t3 }}>4,200 chars</span>
+        <span style={{ fontSize: 10, color: T.t3 }}>4,200 chars</span>
       </>}
     </div>
     <div className="flex items-center gap-2 shrink-0">
-      <Button variant="secondary" onClick={onExpand}>
-        Edit input <ChevronDown size={10} />
-      </Button>
-      {!generating ? (
-        <Button variant="primary" icon={Sparkles} onClick={onGenerate}>
-          Generate
-        </Button>
-      ) : (
-        <span className="flex items-center gap-1.5 px-3 py-1.5" style={{ fontSize: 12, color: T.brand, fontWeight: 500 }}>
-          <Sparkles size={13} className="animate-kai-sparkle" /> Kai is generating...
+      {generating ? (
+        <span className="flex items-center gap-1.5 px-3 py-1" style={{ fontSize: 11, color: T.brand, fontWeight: 500 }}>
+          <Sparkles size={12} className="animate-kai-sparkle" style={{ color: T.purple }} /> Kai is generating...
         </span>
+      ) : (
+        <button onClick={onEdit}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-colors"
+          style={{ fontSize: 11, color: T.t3, border: `1px solid ${T.bd}`, background: "transparent" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = T.brand; e.currentTarget.style.color = T.brand; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = T.bd; e.currentTarget.style.color = T.t3; }}>
+          <Pencil size={10} /> Edit input
+        </button>
       )}
     </div>
   </div>
@@ -248,6 +353,48 @@ export const ClarCard = ({ c, onResolve }) => {
               <span style={{ fontSize: 10, color: T.green, fontWeight: 500 }}>{c.opts[c.resolved]}</span>
               <button onClick={() => onResolve(c.id, null)} style={{ fontSize: 10, color: T.t4, textDecoration: "underline" }}>change</button>
             </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   CLARIFICATION CENTER — full-center hero for State 2 (Refining)
+   Clarifications own the stage; no sidebar competing for attention.
+   ═══════════════════════════════════════════════════════════════ */
+export const ClarificationCenter = ({ clars, onResolve, onSkip }) => {
+  const pending = clars.filter(c => c.resolved === null);
+  const resolvedCount = clars.filter(c => c.resolved !== null).length;
+  return (
+    <div className="flex-1 flex flex-col items-center overflow-y-auto py-10 px-4"
+      style={{ background: T.bg }}>
+      <div style={{ maxWidth: 540, width: "100%" }}>
+        <div className="flex items-center gap-2 mb-1.5">
+          <AlertTriangle size={15} style={{ color: T.amber }} />
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: T.t1 }}>
+            Kai has {pending.length} question{pending.length !== 1 ? "s" : ""} for you
+          </h2>
+        </div>
+        <p style={{ fontSize: 12, color: T.t3, marginBottom: 20, lineHeight: 1.55 }}>
+          Answers improve the next generation round. You can skip any question.
+        </p>
+        <div className="space-y-2 mb-6">
+          {clars.map(c => <ClarCard key={c.id} c={c} onResolve={onResolve} />)}
+        </div>
+        <div className="flex items-center justify-between">
+          <button onClick={onSkip}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-md transition-colors"
+            style={{ fontSize: 11, fontWeight: 500, color: T.brand, border: `1px solid ${T.accentBorder}`, background: "transparent" }}
+            onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            <Sparkles size={11} /> Skip & Generate Anyway
+          </button>
+          {resolvedCount > 0 && (
+            <span style={{ fontSize: 10, color: T.t4 }}>
+              {resolvedCount} of {clars.length} answered
+            </span>
           )}
         </div>
       </div>

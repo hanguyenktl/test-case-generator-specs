@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, ArrowRight, ArrowUpDown, Check, CheckCircle, ChevronDown, ChevronRight, ExternalLink, File, FileDown, FlaskConical, FolderOpen, Link2, Loader2, Pencil, Play, RotateCcw, ShieldCheck, Sparkles, Tag, ThumbsDown, ThumbsUp, Users, X } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle, ChevronDown, FlaskConical, FolderOpen, Loader2, Pencil, RotateCcw, Sparkles, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { T } from '../../utils/design-system';
 import Layout from '../../components/shell/Layout';
-import { Toast, Badge, PriBadge, ConfBadge, IBtn, TestCaseTable, TCTableRenderers } from '../../components/shared';
+import { Toast, ConfBadge, IBtn, TestCaseTable, TCTableRenderers } from '../../components/shared';
 
-import { MOCK_FOLDERS, PIPELINE_STEPS, CLARS, FEATURE_GROUPS, ALL_CASES, TC_LIST_DATA, GEN_MORE_OPTS } from './data/mockData';
+import { MOCK_FOLDERS, PIPELINE_STEPS, CLARS, ALL_CASES, TC_LIST_DATA, GEN_MORE_OPTS } from './data/mockData';
 import { ReqDetailPage, TestCaseListPage } from './components/EntryPages';
-import { DemoToggle, PipelineBar, InputCollapsed, InputExpanded, ClarCard, DetailPanel } from './components/GenerationWorkspace';
+import { DemoToggle, PipelineBar, SetupPage, ContextBar, InputExpanded, ClarificationCenter, DetailPanel } from './components/GenerationWorkspace';
 import { PostSaveView } from './components/PostSaveView';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -38,7 +38,6 @@ export default function AITestCaseGenerationPrototype() {
   const [showGenMore, setShowGenMore] = useState(false);
   const [toast, setToast] = useState({ show: false, msg: "" });
   const [pipeCollapsed, setPipeCollapsed] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const flash = m => { setToast({ show: true, msg: m }); setTimeout(() => setToast({ show: false, msg: "" }), 2500); };
   const resolveC = (id, val) => setClars(p => p.map(c => c.id === id ? { ...c, resolved: val } : c));
@@ -139,11 +138,6 @@ export default function AITestCaseGenerationPrototype() {
     flash(`Accepted all ${areaCases.length} cases in ${area}`);
   };
 
-  const toggleSelectAll = () => {
-    const allOn = cases.every(c => c.selected);
-    setCases(p => p.map(c => ({ ...c, selected: !allOn })));
-  };
-
   // ---------------------------------------------------------------------------
   // RENDER HELPERS
   // ---------------------------------------------------------------------------
@@ -162,14 +156,6 @@ export default function AITestCaseGenerationPrototype() {
     return p;
   };
 
-  // Group cases by area
-  const groupedCases = cases.reduce((acc, c) => {
-    if (!acc[c.area]) acc[c.area] = [];
-    acc[c.area].push(c);
-    return acc;
-  }, {});
-
-  // Helper to group cases by area
   const groupByArea = (data) => {
     return data.reduce((acc, c) => {
       if (!acc[c.area]) acc[c.area] = [];
@@ -208,111 +194,34 @@ export default function AITestCaseGenerationPrototype() {
             ================================================================= */}
         {phase.startsWith("workspace") && (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Top Area: Input Configuration */}
-            {inputExpanded || phase === "workspace-idle" ? (
-              <InputExpanded entry={entry} onCollapse={() => setInputExpanded(false)} onGenerate={handleGenerate} text={text} setText={setText} files={files} setFiles={setFiles} generating={isGen} />
-            ) : (
-              <InputCollapsed entry={entry} onExpand={() => setInputExpanded(true)} onGenerate={handleGenerate} generating={isGen} />
+            {/* Top bar: only during generation/review — setup state owns the full page */}
+            {phase !== "workspace-idle" && (
+              inputExpanded ? (
+                <InputExpanded entry={entry} onCollapse={() => setInputExpanded(false)} onGenerate={handleGenerate} text={text} setText={setText} files={files} setFiles={setFiles} generating={isGen} />
+              ) : (
+                <ContextBar entry={entry} onEdit={() => setInputExpanded(true)} generating={isGen} />
+              )
             )}
 
             {/* Pipeline progress bar */}
             {(isGen || (isDone && !pipeCollapsed)) && <PipelineBar step={pipeStep} done={isDone} onCollapse={() => setPipeCollapsed(true)} />}
 
-            {/* Main Workspace Area */}
+            {/* Main workspace content */}
             {phase === "workspace-idle" ? (
-              <div className="flex-1 flex items-center justify-center p-8">
-                <div className="text-center" style={{ maxWidth: 400 }}>
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: T.accentLight }}>
-                    <Sparkles size={20} style={{ color: T.purple }} />
-                  </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 600, color: T.t1, marginBottom: 8 }}>Ready to generate</h3>
-                  <p style={{ fontSize: 12, color: T.t3, lineHeight: 1.6, marginBottom: 16 }}>
-                    Describe your feature or requirement above. Kai will analyze it, ask for clarifications if needed, and generate comprehensive test cases.
-                  </p>
-                  <button onClick={handleGenerate} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md transition-colors"
-                    style={{ background: T.brand, color: "#fff", fontSize: 13, fontWeight: 500 }}
-                    onMouseEnter={e => e.currentTarget.style.background = T.accent}
-                    onMouseLeave={e => e.currentTarget.style.background = T.brand}>
-                    <Sparkles size={14} /> Generate Test Cases
-                  </button>
-                </div>
-              </div>
+              <SetupPage entry={entry} onGenerate={handleGenerate} text={text} setText={setText} files={files} setFiles={setFiles} />
             ) : (
               <div className="flex-1 flex overflow-hidden">
 
-                {/* LEFT: Input Context Panel */}
-                <div className="overflow-y-auto shrink-0 animate-slide-in-left" style={{ width: sidebarCollapsed ? 40 : 260, borderRight: `1px solid ${T.bd}`, background: T.card, transition: "width 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}>
-                  <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${T.bdLight}` }}>
-                    {!sidebarCollapsed && <span style={{ fontSize: 10, fontWeight: 600, color: T.t4, textTransform: "uppercase", letterSpacing: 0.6 }}>Input Context</span>}
-                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-1 rounded-md transition-colors" style={{ color: T.t4 }}
-                      onMouseEnter={e => { e.currentTarget.style.color = T.t1; e.currentTarget.style.background = T.muted; }}
-                      onMouseLeave={e => { e.currentTarget.style.color = T.t4; e.currentTarget.style.background = "transparent"; }}>
-                      {sidebarCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                    </button>
-                  </div>
-                  {!sidebarCollapsed && (
-                    <>
-                  <div className="px-3 py-2.5">
-                    {/* Req text preview */}
-                    <div className="rounded-md mb-2 p-2" style={{ background: T.bg, border: `1px solid ${T.bdLight}` }}>
-                      <div style={{ fontSize: 11, color: T.t2, lineHeight: 1.5, maxHeight: 60, overflow: "hidden" }}>
-                        {text || "The system shall support login with email and password. Session tokens expire after 30 minutes..."}
-                      </div>
-                      <button className="mt-1 flex items-center gap-1" style={{ fontSize: 10, color: T.brand }}>
-                        <ChevronDown size={9} /> Show full text
-                      </button>
-                    </div>
-                    {/* File */}
-                    {(files.length > 0 || isJ1) && (
-                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-md mb-2" style={{ background: T.bg, border: `1px solid ${T.bdLight}` }}>
-                        <File size={10} style={{ color: T.brand }} />
-                        <span style={{ fontSize: 10, color: T.t2, fontWeight: 500 }}>{files[0]?.name || "auth-flow-spec.pdf"}</span>
-                        <span style={{ fontSize: 9, color: T.t4 }}>{files[0]?.size || "1.2 MB"}</span>
-                      </div>
-                    )}
-                    {/* Req link (J1 only) */}
-                    {isJ1 && (
-                      <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-md mb-3" style={{ background: T.accentLight, border: `1px solid ${T.accentBorder}` }}>
-                        <Link2 size={10} style={{ color: T.brand }} />
-                        <span style={{ fontSize: 10, fontFamily: "ui-monospace, monospace", color: T.brand, fontWeight: 500 }}>TO-8526</span>
-                      </div>
-                    )}
-                    {/* Clarifications */}
-                    {(pipeStep >= 2 || isDone) && clars.some(c => c.resolved === null) && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <AlertTriangle size={10} style={{ color: T.amber }} />
-                            <span style={{ fontSize: 10, fontWeight: 600, color: T.t3, textTransform: "uppercase", letterSpacing: 0.4 }}>Clarifications</span>
-                          </div>
-                          <button onClick={() => setPipeStep(3)} style={{ fontSize: 10, color: T.t4, fontWeight: 500 }} className="hover:underline">Skip</button>
-                        </div>
-                        <div style={{ fontSize: 10, color: T.t4, marginBottom: 6, lineHeight: 1.4 }}>Answers improve next round</div>
-                        {clars.filter(c => c.resolved === null).map(c => <ClarCard key={c.id} c={c} onResolve={resolveC} />)}
-                        <button onClick={() => setPipeStep(3)} className="w-full mt-2 py-1.5 rounded border border-dashed text-[10px] font-medium transition-colors"
-                          style={{ borderColor: T.bd, color: T.t3 }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = T.brand; e.currentTarget.style.color = T.brand; }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = T.bd; e.currentTarget.style.color = T.t3; }}>
-                          Skip and Generate
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {/* Ask Kai */}
-                  <div className="px-3 py-2.5" style={{ borderTop: `1px solid ${T.bdLight}`, background: "rgba(94,106,210,0.02)" }}>
-                    <button className="flex items-center gap-2 w-full justify-center py-2 rounded-md transition-all"
-                      style={{ fontSize: 11, fontWeight: 500, color: T.brand, background: T.accentLight, border: `1px solid ${T.accentBorder}` }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(94,106,210,0.12)"; e.currentTarget.style.borderColor = T.brand; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = T.accentLight; e.currentTarget.style.borderColor = T.accentBorder; }}>
-                      <Sparkles size={12} /> Chat with Kai <ExternalLink size={9} />
-                    </button>
-                  </div>
-                    </>
-                  )}
-                </div>
-
-                {/* MIDDLE: Results List */}
+                {/* MIDDLE: Results — full width, no sidebar */}
                 <div className="flex-1 flex flex-col overflow-hidden bg-white animate-fade-in-up" style={{ minWidth: 0 }}>
+
+                  {/* State 2: Clarification center-hero (replaces empty state + sidebar cards) */}
+                  {waitingClar && (
+                    <ClarificationCenter clars={clars} onResolve={resolveC} onSkip={() => setPipeStep(3)} />
+                  )}
+                  {/* State 3+: Tabs and results list — hidden while clarifications are pending */}
+                  {!waitingClar && (
+                  <div className="flex-1 flex flex-col overflow-hidden">
                   {/* List header/tabs */}
                   <div className="flex items-center justify-between px-4 shrink-0" style={{ background: T.card, borderBottom: `1px solid ${T.bdLight}` }}>
                     <div className="flex items-center gap-0">
@@ -354,21 +263,7 @@ export default function AITestCaseGenerationPrototype() {
                       <div style={{ background: T.bg, minHeight: "100%" }}>
                         {(tab === "review" ? cases : (tab === "accepted" ? accepted : (tab === "rejected" ? rejected : []))).length === 0 && (
                           <div className="p-20 text-center flex flex-col items-center">
-                            {waitingClar ? (
-                              <>
-                                <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4" style={{ background: "rgba(217,119,6,0.06)", border: "1.5px solid rgba(217,119,6,0.15)" }}>
-                                  <AlertTriangle size={22} style={{ color: T.amber }} />
-                                </div>
-                                <p style={{ fontSize: 13, fontWeight: 600, color: T.t1, marginBottom: 4 }}>Kai has questions for you</p>
-                                <p style={{ fontSize: 12, color: T.t3, maxWidth: 300, lineHeight: 1.55 }}>Answer the clarifications in the sidebar to help Kai generate more accurate test cases, or skip to continue.</p>
-                                <button onClick={() => setPipeStep(3)} className="mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors"
-                                  style={{ fontSize: 11, fontWeight: 500, color: T.brand, border: `1px solid ${T.accentBorder}` }}
-                                  onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
-                                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                                  <Sparkles size={11} /> Skip & Generate Anyway
-                                </button>
-                              </>
-                            ) : isGen && streamCount === 0 ? (
+                            {isGen && streamCount === 0 ? (
                               <>
                                 <Loader2 size={24} className="animate-spin mb-3" style={{ color: T.brand }} />
                                 <p style={{ fontSize: 13, fontWeight: 600, color: T.t1, marginBottom: 4 }}>Kai is analyzing requirements...</p>
@@ -457,6 +352,8 @@ export default function AITestCaseGenerationPrototype() {
                       </div>
                     )}
                   </div>
+                  </div>
+                  )}
 
                   {/* Generation loading state */}
                   {isGen && pipeStep >= 3 && streamCount < ALL_CASES.length && (
