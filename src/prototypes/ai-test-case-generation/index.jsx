@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Check, CheckCircle, ChevronDown, FlaskConical, FolderOpen, Loader2, Pencil, RotateCcw, Sparkles, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { AlertTriangle, Check, CheckCircle, ChevronDown, FlaskConical, Loader2, Pencil, Play, RotateCcw, Sparkles, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { T } from '../../utils/design-system';
 import Layout from '../../components/shell/Layout';
 import { Toast, ConfBadge, IBtn, TestCaseTable, TCTableRenderers } from '../../components/shared';
 
-import { MOCK_FOLDERS, PIPELINE_STEPS, CLARS, ALL_CASES, TC_LIST_DATA, GEN_MORE_OPTS } from './data/mockData';
+import { PIPELINE_STEPS, CLARS, ALL_CASES, TC_LIST_DATA, GEN_MORE_OPTS } from './data/mockData';
 import { ReqDetailPage, TestCaseListPage } from './components/EntryPages';
-import { DemoToggle, PipelineBar, SetupPage, ContextBar, InputExpanded, ClarificationCenter, DetailPanel } from './components/GenerationWorkspace';
-import { PostSaveView } from './components/PostSaveView';
+import { DemoToggle, PipelineBar, SetupPage, ContextBar, InputExpanded, ClarificationCenter, DetailPanel, PdfViewerOverlay, RequirementReferencePanel, ExecuteModal } from './components/GenerationWorkspace';
 
 /* ═══════════════════════════════════════════════════════════════
    MAIN APP — Full flow with entry pages
@@ -38,14 +37,26 @@ export default function AITestCaseGenerationPrototype() {
   const [showGenMore, setShowGenMore] = useState(false);
   const [toast, setToast] = useState({ show: false, msg: "" });
   const [pipeCollapsed, setPipeCollapsed] = useState(false);
+  const [targetFolder, setTargetFolder] = useState("Authentication Tests");
+  const [pdfOverlay, setPdfOverlay] = useState(null);
+  const [refPanelCollapsed, setRefPanelCollapsed] = useState(false);
+  const [executeModal, setExecuteModal] = useState(null); // null | { count, includesExisting }
 
   const flash = m => { setToast({ show: true, msg: m }); setTimeout(() => setToast({ show: false, msg: "" }), 2500); };
   const resolveC = (id, val) => setClars(p => p.map(c => c.id === id ? { ...c, resolved: val } : c));
 
-  const handleExecute = () => {
-    flash(`Executing 7 linked test cases...`);
-    // Simulate execution start
-    setTimeout(() => flash(`Execution started successfully.`), 1000);
+  const handleExecute = (count, includesExisting = false) => {
+    setExecuteModal({ count: count ?? accepted.length, includesExisting });
+  };
+
+  const handleExecuteConfirm = (runName) => {
+    setExecuteModal(null);
+    flash(`Test run "${runName}" started`);
+  };
+
+  const handleExecuteCancel = () => {
+    setExecuteModal(null);
+    setTab("accepted");
   };
 
   const isJ1 = entry === "j1";
@@ -71,7 +82,7 @@ export default function AITestCaseGenerationPrototype() {
             if (p >= ALL_CASES.length) {
               clearInterval(timer);
               setPhase("workspace-done");
-              setCases(ALL_CASES.map(c => ({ ...c, selected: true })));
+              setCases(ALL_CASES.map(c => ({ ...c, selected: false })));
               if (ALL_CASES.length > 0) setSelectedId(ALL_CASES[0].id);
               flash("Generation complete");
               return p;
@@ -87,9 +98,21 @@ export default function AITestCaseGenerationPrototype() {
   // Sync streamed cases
   useEffect(() => {
     if (phase === "workspace-gen" && streamCount > 0) {
-      setCases(ALL_CASES.slice(0, streamCount).map(c => ({ ...c, selected: true })));
+      setCases(ALL_CASES.slice(0, streamCount).map(c => ({ ...c, selected: false })));
     }
   }, [streamCount, phase]);
+
+  // Auto-collapse reference panel when entering triage so DetailPanel gets focus
+  useEffect(() => {
+    if (phase === "workspace-done") setRefPanelCollapsed(true);
+  }, [phase]);
+
+  // When Review queue empties, land on Accepted tab — that's the natural history view
+  useEffect(() => {
+    if (phase === "workspace-done" && cases.length === 0 && accepted.length > 0 && tab === "review") {
+      setTab("accepted");
+    }
+  }, [cases.length, phase]);
 
   const handleGenerate = () => {
     setPhase("workspace-gen");
@@ -107,19 +130,24 @@ export default function AITestCaseGenerationPrototype() {
     }
   };
 
-  const handleSave = () => {
-    setPhase("saved");
+  const toggleSelect = id => setCases(p => p.map(c => c.id === id ? { ...c, selected: !c.selected } : c));
+
+  const handleAcceptSelected = () => {
+    const sel = cases.filter(c => c.selected);
+    if (!sel.length) return;
+    setAccepted(prev => [...prev, ...sel]);
+    setCases(prev => prev.filter(c => !c.selected));
+    if (sel.some(c => c.id === selectedId)) setSelectedId(null);
+    flash(`${sel.length} cases saved to ${targetFolder}`);
   };
 
-  const toggleSelect = id => setCases(p => p.map(c => c.id === id ? { ...c, selected: !c.selected } : c));
-  
   const handleAccept = (id) => {
     const tc = cases.find(c => c.id === id);
     if (!tc) return;
     setAccepted(prev => [...prev, tc]);
     setCases(prev => prev.filter(c => c.id !== id));
     if (selectedId === id) setSelectedId(null);
-    flash("Test case accepted");
+    flash(`Saved to ${targetFolder}`);
   };
 
   const handleReject = (id) => {
@@ -135,7 +163,7 @@ export default function AITestCaseGenerationPrototype() {
     const areaCases = cases.filter(c => c.area === area);
     setAccepted(prev => [...prev, ...areaCases]);
     setCases(prev => prev.filter(c => c.area !== area));
-    flash(`Accepted all ${areaCases.length} cases in ${area}`);
+    flash(`${areaCases.length} cases saved to ${targetFolder}`);
   };
 
   // ---------------------------------------------------------------------------
@@ -165,7 +193,6 @@ export default function AITestCaseGenerationPrototype() {
   };
 
   const selectedTc = tab === "review" ? cases.find(c => c.id === selectedId) : (tab === "accepted" ? accepted.find(c => c.id === selectedId) : rejected.find(c => c.id === selectedId));
-  const selCount = cases.filter(c => c.selected).length;
   const isGen = phase === "workspace-gen";
   const isDone = phase === "workspace-done";
   const waitingClar = isGen && pipeStep === 2 && !clars.every(c => c.resolved !== null);
@@ -180,6 +207,16 @@ export default function AITestCaseGenerationPrototype() {
     >
       <div className="flex-1 flex flex-col overflow-hidden bg-[T.bg] relative">
         <Toast show={toast.show} msg={toast.msg} />
+        <PdfViewerOverlay filename={pdfOverlay} onClose={() => setPdfOverlay(null)} />
+        <ExecuteModal
+          config={executeModal}
+          accepted={accepted}
+          folder={targetFolder}
+          reviewRemaining={cases.length}
+          isJ1={isJ1}
+          onConfirm={handleExecuteConfirm}
+          onCancel={handleExecuteCancel}
+        />
 
         {/* =================================================================
             PHASE 1: ENTRY PAGES
@@ -199,7 +236,9 @@ export default function AITestCaseGenerationPrototype() {
               inputExpanded ? (
                 <InputExpanded entry={entry} onCollapse={() => setInputExpanded(false)} onGenerate={handleGenerate} text={text} setText={setText} files={files} setFiles={setFiles} generating={isGen} />
               ) : (
-                <ContextBar entry={entry} onEdit={() => setInputExpanded(true)} generating={isGen} />
+                <ContextBar entry={entry} onEdit={() => setInputExpanded(true)} generating={isGen}
+                  showFolderSelect={isDone} targetFolder={targetFolder} setTargetFolder={setTargetFolder}
+                  onPdfOpen={setPdfOverlay} />
               )
             )}
 
@@ -208,20 +247,84 @@ export default function AITestCaseGenerationPrototype() {
 
             {/* Main workspace content */}
             {phase === "workspace-idle" ? (
-              <SetupPage entry={entry} onGenerate={handleGenerate} text={text} setText={setText} files={files} setFiles={setFiles} />
+              isJ1 ? (
+                <div className="flex-1 flex overflow-hidden">
+                  <RequirementReferencePanel
+                    mode="j1"
+                    files={files}
+                    clars={clars}
+                    collapsed={refPanelCollapsed}
+                    onToggle={() => setRefPanelCollapsed(c => !c)}
+                    onPdfOpen={setPdfOverlay}
+                    showGaps={true}
+                  />
+                  <SetupPage entry={entry} onGenerate={handleGenerate} text={text} setText={setText} files={files} setFiles={setFiles} />
+                </div>
+              ) : (
+                <SetupPage entry={entry} onGenerate={handleGenerate} text={text} setText={setText} files={files} setFiles={setFiles} />
+              )
             ) : (
               <div className="flex-1 flex overflow-hidden">
 
-                {/* MIDDLE: Results — full width, no sidebar */}
+                {/* LEFT: Reference panel — J1 shows requirement, J2 shows submitted context */}
+                <RequirementReferencePanel
+                  mode={entry}
+                  description={text}
+                  files={files}
+                  clars={clars}
+                  collapsed={refPanelCollapsed}
+                  onToggle={() => setRefPanelCollapsed(c => !c)}
+                  onPdfOpen={setPdfOverlay}
+                  showGaps={false}
+                />
+
+                {/* MIDDLE: Results */}
                 <div className="flex-1 flex flex-col overflow-hidden bg-white animate-fade-in-up" style={{ minWidth: 0 }}>
 
                   {/* State 2: Clarification center-hero (replaces empty state + sidebar cards) */}
                   {waitingClar && (
-                    <ClarificationCenter clars={clars} onResolve={resolveC} onSkip={() => setPipeStep(3)} />
+                    <ClarificationCenter clars={clars} onResolve={resolveC} onSkip={() => setPipeStep(3)} onPdfOpen={setPdfOverlay} />
                   )}
-                  {/* State 3+: Tabs and results list — hidden while clarifications are pending */}
+                  {/* State 3+: Tabs and results list */}
                   {!waitingClar && (
                   <div className="flex-1 flex flex-col overflow-hidden">
+
+                  {/* Session complete banner — replaces SessionCompleteCard takeover */}
+                  {isDone && cases.length === 0 && accepted.length > 0 && (
+                    <div className="flex items-center gap-3 px-4 py-2 shrink-0"
+                      style={{ background: "rgba(22,163,74,0.04)", borderBottom: "1px solid rgba(22,163,74,0.15)" }}>
+                      <CheckCircle size={12} style={{ color: T.green }} />
+                      <span style={{ fontSize: 11, color: T.t2 }}>
+                        <strong style={{ color: T.t1, fontWeight: 600 }}>{accepted.length} test cases</strong> saved to {targetFolder}
+                        {isJ1 && <> · <span style={{ color: T.brand, fontWeight: 500 }}>TO-8526</span></>}
+                      </span>
+                      <div className="flex-1" />
+                      <button onClick={handleGenerate}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-colors"
+                        style={{ fontSize: 11, color: T.t3, border: `1px solid ${T.bd}` }}
+                        onMouseEnter={e => { e.currentTarget.style.background = T.muted; e.currentTarget.style.color = T.t1; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.t3; }}>
+                        <Sparkles size={10} style={{ color: T.purple }} /> Generate more
+                      </button>
+                      {isJ1 && (
+                        <button onClick={() => handleExecute(accepted.length + 7, true)}
+                          className="flex items-center gap-1 px-2 py-1 rounded-md transition-colors"
+                          style={{ fontSize: 10, color: T.t3, border: `1px solid ${T.bd}` }}
+                          onMouseEnter={e => { e.currentTarget.style.background = T.muted; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                          Execute all ({accepted.length + 7})
+                        </button>
+                      )}
+                      <button onClick={() => handleExecute(accepted.length)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors"
+                        style={{ fontSize: 11, fontWeight: 500, color: "#fff", background: T.green }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
+                        onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+                        <Play size={10} /> Execute ({accepted.length})
+                      </button>
+                    </div>
+                  )}
+
                   {/* List header/tabs */}
                   <div className="flex items-center justify-between px-4 shrink-0" style={{ background: T.card, borderBottom: `1px solid ${T.bdLight}` }}>
                     <div className="flex items-center gap-0">
@@ -286,7 +389,7 @@ export default function AITestCaseGenerationPrototype() {
                             groups={Object.entries(groupByArea(tab === "review" ? cases : (tab === "accepted" ? accepted : (tab === "rejected" ? rejected : [])))).map(([area, areaCases]) => ({
                               name: area,
                               items: areaCases,
-                              rightAction: !selectedId && tab === "review" ? () => (
+                              rightAction: tab === "review" ? () => (
                                 <button onClick={() => handleAcceptGroup(area)} className="flex items-center gap-1 px-2 py-1 rounded transition-colors text-emerald-600 hover:bg-emerald-50"
                                   style={{ fontSize: 10, fontWeight: 600 }}>
                                   <Check size={12} strokeWidth={2.5} /> Accept group
@@ -294,31 +397,33 @@ export default function AITestCaseGenerationPrototype() {
                               ) : null
                             }))}
                             getRowStyle={row => ({ borderLeft: `3px solid ${row.confidence === "high" ? T.green : row.confidence === "medium" ? T.amber : T.red}` })}
-                            columns={selectedId ? [
-                              { width: 56, render: (row) => <ConfBadge level={row.confidence} /> },
-                              { render: (row) => (
-                                <div style={{ minWidth: 0 }}>
-                                  <div style={{ fontSize: 12, fontWeight: selectedId === row.id ? 600 : 400, color: T.t1 }}>{row.name}</div>
+                            columns={[
+                              { width: 36, render: (row) => (
+                                <div className="w-4 h-4 rounded border flex items-center justify-center transition-all duration-150 cursor-pointer"
+                                  onClick={e => { e.stopPropagation(); toggleSelect(row.id); }}
+                                  style={{ borderColor: row.selected ? T.brand : T.t4, background: row.selected ? T.brand : "transparent" }}>
+                                  {row.selected && <Check size={10} style={{ color: "#fff" }} strokeWidth={3} />}
                                 </div>
                               )},
-                              { width: 44, render: TCTableRenderers.priority }
-                            ] : [
-                              { 
-                                width: 36,
-                                render: (row) => (
-                                  <div className="w-4 h-4 rounded border flex items-center justify-center transition-all duration-200 cursor-pointer"
-                                    onClick={(e) => { e.stopPropagation(); toggleSelect(row.id); }}
-                                    style={{ borderColor: row.selected ? T.brand : T.t4, background: row.selected ? T.brand : "transparent" }}>
-                                    {row.selected && <Check size={10} style={{ color: "#fff", strokeWidth: 3 }} />}
-                                  </div>
-                                )
-                              },
-                              { label: "Test Case", render: TCTableRenderers.nameWithTags },
+                              { label: "Test Case", render: (row) => (
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: 12, fontWeight: selectedId === row.id ? 600 : 400, color: T.t1, lineHeight: 1.4 }}>{row.name}</div>
+                                  {row.tags?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                      {row.tags.map(tag => (
+                                        <span key={tag} style={{ fontSize: 9, color: T.t3, background: T.muted, border: `1px solid ${T.bdLight}`, borderRadius: 3, padding: "0 5px", lineHeight: "14px", display: "inline-flex" }}>
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )},
                               { label: "Confidence", width: 84, render: (row) => <ConfBadge level={row.confidence} /> },
                               { label: "Steps", width: 64, render: (row) => <span style={{ fontSize: 11, color: T.t3 }}>{row.steps} steps</span> },
                               { label: "Pri", width: 50, render: TCTableRenderers.priority }
                             ]}
-                            renderRowActions={!selectedId ? (tc) => (
+                            renderRowActions={(tc) => (
                               <>
                                 {tab === "review" && (
                                   <>
@@ -326,14 +431,11 @@ export default function AITestCaseGenerationPrototype() {
                                     <button onClick={e => { e.stopPropagation(); handleReject(tc.id); }} className="p-1 rounded hover:bg-rose-50 text-rose-600 transition-colors" title="Reject"><X size={14} /></button>
                                   </>
                                 )}
-                                {tab === "accepted" && (
-                                  <button onClick={e => { e.stopPropagation(); handleReject(tc.id); }} className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors" title="Move to Review"><RotateCcw size={14} className="scale-x-[-1]" /></button>
-                                )}
                                 {tab === "rejected" && (
                                   <button onClick={e => { e.stopPropagation(); handleAccept(tc.id); }} className="p-1 rounded hover:bg-emerald-50 text-emerald-600 transition-colors" title="Restore"><RotateCcw size={14} /></button>
                                 )}
                               </>
-                            ) : undefined}
+                            )}
                           />
                         )}
 
@@ -363,73 +465,78 @@ export default function AITestCaseGenerationPrototype() {
                     </div>
                   )}
 
-                  {/* Action Bar */}
-                  {isDone && tab === "review" && cases.length > 0 && (
+                  {/* Action Bar — always shown in triage */}
+                  {isDone && tab === "review" && (
                     <div className="flex items-center justify-between px-4 py-2 shrink-0" style={{ background: T.hover, borderTop: `1px solid ${T.bdLight}` }}>
                       <div className="flex items-center gap-2">
-                        <div className="relative">
-                          <button onClick={() => setShowGenMore(!showGenMore)}
-                            className="flex items-center gap-1 px-2 py-1.5 rounded-md transition-colors"
-                            style={{ fontSize: 11, fontWeight: 500, color: T.brand, border: `1px solid ${T.accentBorder}` }}
-                            onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
-                            onMouseLeave={e => { if (!showGenMore) e.currentTarget.style.background = "transparent"; }}>
-                            <Sparkles size={10} /> Generate more <ChevronDown size={9} />
+                        {/* Bulk accept — only when checkboxes are ticked */}
+                        {cases.some(c => c.selected) && (
+                          <button onClick={handleAcceptSelected}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-colors"
+                            style={{ fontSize: 11, fontWeight: 600, color: T.green, background: "rgba(22,163,74,0.06)", border: "1px solid rgba(22,163,74,0.2)" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(22,163,74,0.12)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "rgba(22,163,74,0.06)"}>
+                            <Check size={11} strokeWidth={2.5} /> Accept selected ({cases.filter(c => c.selected).length})
                           </button>
-                          {showGenMore && (
-                            <div className="absolute bottom-full mb-1 left-0 w-52 rounded-md overflow-hidden z-20" style={{ background: T.card, border: `1px solid ${T.bd}`, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
-                              {GEN_MORE_OPTS.map(o => (
-                                <button key={o} onClick={() => setShowGenMore(false)} className="w-full text-left px-3 py-1.5 transition-colors"
-                                  style={{ fontSize: 11, color: T.t2, borderBottom: `1px solid ${T.bdLight}` }}
-                                  onMouseEnter={e => e.currentTarget.style.background = T.hover}
-                                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                                  {o}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <button onClick={() => { setInputExpanded(true); }}
-                          className="flex items-center gap-1 px-2 py-1.5 rounded-md transition-colors"
-                          style={{ fontSize: 11, color: T.t3, border: `1px solid ${T.bd}` }}
-                          onMouseEnter={e => { e.currentTarget.style.background = T.muted; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-                          <Pencil size={10} /> Refine input
-                        </button>
+                        )}
+                        {!cases.some(c => c.selected) && cases.length > 0 && (
+                          <div className="relative">
+                            <button onClick={() => setShowGenMore(!showGenMore)}
+                              className="flex items-center gap-1 px-2 py-1.5 rounded-md transition-colors"
+                              style={{ fontSize: 11, fontWeight: 500, color: T.brand, border: `1px solid ${T.accentBorder}` }}
+                              onMouseEnter={e => e.currentTarget.style.background = T.accentLight}
+                              onMouseLeave={e => { if (!showGenMore) e.currentTarget.style.background = "transparent"; }}>
+                              <Sparkles size={10} /> Generate more <ChevronDown size={9} />
+                            </button>
+                            {showGenMore && (
+                              <div className="absolute bottom-full mb-1 left-0 w-52 rounded-md overflow-hidden z-20" style={{ background: T.card, border: `1px solid ${T.bd}`, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                                {GEN_MORE_OPTS.map(o => (
+                                  <button key={o} onClick={() => setShowGenMore(false)} className="w-full text-left px-3 py-1.5 transition-colors"
+                                    style={{ fontSize: 11, color: T.t2, borderBottom: `1px solid ${T.bdLight}` }}
+                                    onMouseEnter={e => e.currentTarget.style.background = T.hover}
+                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                    {o}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!cases.some(c => c.selected) && (
+                          <button onClick={() => setInputExpanded(true)}
+                            className="flex items-center gap-1 px-2 py-1.5 rounded-md transition-colors"
+                            style={{ fontSize: 11, color: T.t3, border: `1px solid ${T.bd}` }}
+                            onMouseEnter={e => e.currentTarget.style.background = T.muted}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            <Pencil size={10} /> Refine input
+                          </button>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <IBtn title="Helpful"><ThumbsUp size={11} strokeWidth={1.4} /></IBtn>
                         <IBtn title="Not helpful"><ThumbsDown size={11} strokeWidth={1.4} /></IBtn>
+                        {/* Execute — available once any cases are accepted */}
+                        {accepted.length === 0 ? (
+                          <button disabled
+                            title="Accept test cases first to execute"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md"
+                            style={{ fontSize: 11, fontWeight: 500, color: T.t4, background: T.muted, border: `1px solid ${T.bdLight}`, cursor: "not-allowed" }}>
+                            <Play size={11} /> Execute (0)
+                          </button>
+                        ) : (
+                          <button onClick={() => handleExecute(accepted.length)}
+                            title={cases.length > 0 ? `Execute ${accepted.length} accepted · ${cases.length} still in review` : undefined}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors"
+                            style={{ fontSize: 11, fontWeight: 500, color: "#fff", background: T.brand, border: `1px solid ${T.brand}` }}
+                            onMouseEnter={e => e.currentTarget.style.background = T.accent}
+                            onMouseLeave={e => e.currentTarget.style.background = T.brand}>
+                            <Play size={11} /> Execute ({accepted.length})
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* Sticky Save Footer */}
-                  {isDone && ((tab === "review" && cases.some(c => c.selected)) || (tab === "accepted" && accepted.length > 0)) && (
-                    <div className="flex items-center justify-between px-4 py-2.5 shrink-0 animate-fade-in-up" style={{ background: T.card, borderTop: `1px solid ${T.bd}`, boxShadow: "0 -2px 8px rgba(0,0,0,0.04)" }}>
-                      <div className="flex items-center gap-3">
-                        <Check size={14} style={{ color: T.green }} />
-                        <span style={{ fontSize: 11, color: T.t2 }}>
-                          {tab === "accepted" ? `${accepted.length} accepted` : `${selCount} selected`} test cases
-                        </span>
-                        <div className="flex items-center gap-1.5 ml-2">
-                          <span style={{ fontSize: 10, color: T.t4 }}>Save to:</span>
-                          <div className="flex items-center gap-1 px-2 py-1 rounded" style={{ border: `1px solid ${T.bd}`, background: T.bg }}>
-                            <FolderOpen size={10} style={{ color: T.t4 }} />
-                            <select style={{ fontSize: 11, color: T.t2, background: "transparent", outline: "none", width: 140 }}>
-                              <option>Authentication Tests</option>
-                              {MOCK_FOLDERS.map(f => <option key={f}>{f}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                      <button onClick={handleSave} className="flex items-center gap-1.5 px-4 py-2 rounded-md transition-all animate-glow"
-                        style={{ background: T.brand, color: "#fff", fontSize: 12, fontWeight: 500 }}
-                        onMouseEnter={e => e.currentTarget.style.background = T.accent}
-                        onMouseLeave={e => e.currentTarget.style.background = T.brand}>
-                        <Check size={13} strokeWidth={2.5} /> Save {tab === "accepted" ? accepted.length : selCount} Test Cases
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {/* RIGHT PANEL (Detail) */}
@@ -450,10 +557,6 @@ export default function AITestCaseGenerationPrototype() {
           </div>
         )}
 
-        {/* =================================================================
-            PHASE 4: SAVED
-            ================================================================= */}
-        {phase === "saved" && <PostSaveView savedCount={cases.filter(c => c.selected).length} isJ1={isJ1} />}
       </div>
     </Layout>
   );

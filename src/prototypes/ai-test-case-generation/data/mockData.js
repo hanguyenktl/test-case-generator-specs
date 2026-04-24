@@ -8,9 +8,19 @@ export const PIPELINE_STEPS = [
 ];
 
 export const CLARS = [
-  { id: 1, q: "What is the expected behavior when a user enters an expired session token?", opts: ["Show error & redirect to login", "Auto-refresh token silently", "Show warning with retry option"], resolved: null },
+  { id: 1, q: "What is the expected behavior when a user enters an expired session token?", opts: ["Show error & redirect to login", "Auto-refresh token silently", "Show warning with retry option"], resolved: null, sourceRef: { label: "auth-flow-spec.pdf §3.2", target: "auth-flow-spec.pdf" } },
   { id: 2, q: "Should password reset require email verification before allowing a new password?", opts: ["Yes, always", "Only for new devices"], resolved: null },
 ];
+
+export const MOCK_REQUIREMENT_DETAIL = {
+  key: "TO-8526",
+  type: "Story",
+  status: "In Progress",
+  title: "User authentication flow",
+  qualityScore: 72,
+  description: "The system shall support login with email and password. Session tokens must expire after 30 minutes of inactivity. User accounts shall be locked after 5 consecutive failed login attempts. A password reset mechanism must be provided via registered email address.",
+  url: "#",
+};
 
 export const FEATURE_GROUPS = [
   {
@@ -137,6 +147,11 @@ export const TC_LIST_DATA = [
   { id: "AC-FA049550", name: "Verify checkout calculates tax correctly", type: "AUTOMATED", status: "Published", priority: "High", lastRun: "Passed", assignee: "Minh Tran", updated: "Apr 13", tags: ["calculation"] },
   { id: "TC-516401", name: "Verify SSO login via SAML 2.0", type: "MANUAL", status: "Draft", priority: "High", lastRun: "—", assignee: "Anh Le", updated: "Apr 15", tags: ["sso", "security"] },
   { id: "TC-516415", name: "Verify account lockout notification email", type: "MANUAL", status: "Published", priority: "Medium", lastRun: "Passed", assignee: "Huy Dao", updated: "Apr 8", tags: ["email"] },
+];
+
+export const MOCK_REQUIREMENT_GAPS = [
+  "No design files attached — add UI mockups for visual validation",
+  "No API contract attached — integration-level tests will be speculative",
 ];
 
 export const TC_FOLDERS = [
