@@ -4,6 +4,7 @@ import Layout from './components/shell/Layout';
 import Directory from './pages/Directory';
 import ManualTestAuthoringPrototype from './prototypes/manual-test-authoring';
 import AITestCaseGenerationPrototype from './prototypes/ai-test-case-generation';
+import ImportWizardPrototype from './prototypes/import-wizard';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         {/* Individual Prototype Routes */}
         <Route path="/prototypes/manual-test-authoring" element={<ManualTestAuthoringPrototype />} />
         <Route path="/prototypes/ai-test-case-generation" element={<AITestCaseGenerationPrototype />} />
+        <Route path="/prototypes/import-wizard" element={<ImportWizardPrototype />} />
 
         {/* Fallback */}
         <Route path="*" element={

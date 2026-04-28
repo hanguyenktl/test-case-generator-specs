@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(node -e \"const l = require\\('/Users/ha.nnguyen/TestOps Prototypes/test-case-generator/node_modules/lucide-react'\\); console.log\\(Object.keys\\(l\\).filter\\(k => k.startsWith\\('Panel'\\)\\).join\\(', '\\)\\)\")"
+    ]
+  }
+}

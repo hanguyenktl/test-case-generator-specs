@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout as LayoutIcon, Wand2, ArrowRight } from 'lucide-react';
+import { Layout as LayoutIcon, Wand2, ArrowRight, UploadCloud } from 'lucide-react';
 import { T } from '../utils/design-system';
 import { Link } from 'react-router-dom';
 
@@ -20,6 +20,15 @@ const prototypes = [
     icon: Wand2,
     status: 'Active',
     path: '/prototypes/ai-test-case-generation',
+    color: T.brand
+  },
+  {
+    id: 'import-wizard',
+    name: 'Import Wizard',
+    description: 'Decomposed test cases import wizard prototype for field and value mapping.',
+    icon: UploadCloud,
+    status: 'Active',
+    path: '/prototypes/import-wizard',
     color: T.brand
   },
 ];
