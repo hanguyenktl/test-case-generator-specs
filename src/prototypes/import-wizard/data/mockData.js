@@ -24,18 +24,18 @@ export const TARGETS = [
 ];
 
 export const BUILD_ROWS = () => ([
-  { id: 1, csv: "Title",            sample: "Verify user can log in with valid credentials",    target: "name",       auto: "alias" },
+  { id: 1, csv: "Title",            sample: "Verify user can log in with valid credentials",    target: null,       auto: null },
   { id: 2, csv: "ID",               sample: "C2104",                                            target: "__skip__",   auto: null },
   { id: 3, csv: "Section",          sample: "Authentication > Login",                           target: "folder",     auto: "alias" },
   { id: 4, csv: "Preconditions",    sample: "User has a verified account",                      target: "preconditions", auto: "exact" },
   { id: 5, csv: "Steps",            sample: "1. Navigate to login page\n2. Enter credentials",  target: "steps",      auto: "alias" },
   { id: 6, csv: "Expected Result",  sample: "User lands on dashboard",                          target: "expected",   auto: "exact" },
-  { id: 7, csv: "Priority",         sample: "High",                                             target: "priority",   auto: "exact", needsValueMap: true },
+  { id: 7, csv: "Priority",         sample: "High",                                             target: "priority",   auto: "exact", needsValueMap: true, valueMapDone: true },
   { id: 8, csv: "Type",             sample: "Functional",                                       target: "tags",       auto: "alias" },
-  { id: 9, csv: "Status",           sample: "Active",                                           target: "status",     auto: "exact", needsValueMap: true, valueMapDone: false },
-  { id: 10, csv: "References",      sample: "JIRA-8821, JIRA-9003",                             target: "cf_reqId",   auto: "alias" },
-  { id: 11, csv: "Sprint",          sample: "Sprint 21",                                        target: null,         auto: null, customFieldCandidate: true },
-  { id: 12, csv: "Estimate (hrs)",  sample: "0.5",                                              target: null,         auto: null, customFieldCandidate: true },
-  { id: 13, csv: "Created By",      sample: "alex.nguyen@acme.com",                             target: "__skip__",   auto: null },
-  { id: 14, csv: "Last Modified",   sample: "2026-03-14",                                       target: "__skip__",   auto: null },
+  { id: 9, csv: "Category",         sample: "UI/UX",                                            target: "tags",       auto: "alias" },
+  { id: 10, csv: "Status",           sample: "Active",                                           target: "status",     auto: "exact", needsValueMap: true, valueMapDone: false },
+  { id: 11, csv: "References",      sample: "JIRA-8821, JIRA-9003",                             target: "cf_reqId",   auto: "alias" },
+  { id: 12, csv: "Sprint",          sample: "Sprint 21",                                        target: null,         auto: null, customFieldCandidate: true },
+  { id: 13, csv: "Estimate (hrs)",  sample: "0.5",                                              target: null,         auto: null, customFieldCandidate: true },
+  { id: 14, csv: "Created By",      sample: "alex.nguyen@acme.com",                             target: "__skip__",   auto: null },
 ]);
